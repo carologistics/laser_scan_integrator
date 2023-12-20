@@ -249,18 +249,18 @@ class scanMerger : public rclcpp::Node
         this->declare_parameter<float>("robotLeftEnd");
     }
     void refresh_params(){
-        this->get_parameter_or<std::string>("integratedTopic", integratedTopic_, "integrated_scan");
-        this->get_parameter_or<std::string>("integratedFrameId", integratedFrameId_, "laser");
-        this->get_parameter_or<std::string>("scanTopic1",topic1_ ,"lidar_front_right/scan");
+        this->get_parameter_or<std::string>("integratedTopic", integratedTopic_, "/robotino3base1/scan");
+        this->get_parameter_or<std::string>("integratedFrameId", integratedFrameId_, "laser_link");
+        this->get_parameter_or<std::string>("scanTopic1",topic1_ ,"/robotino/SickLaser_Front_Remaped");
         this->get_parameter_or<float>("laser1XOff",laser1XOff_, 0.0);
         this->get_parameter_or<float>("laser1YOff",laser1YOff_, 0.0);
         this->get_parameter_or<float>("laser1Alpha",laser1Alpha_, 0.0);
         this->get_parameter_or<bool>("show1",show1_, true);
-        this->get_parameter_or<std::string>("scanTopic2",topic2_, "lidar_rear_left/scan");
+        this->get_parameter_or<std::string>("scanTopic2",topic2_, "/robotino/SickLaser_Rear_Remaped");
         this->get_parameter_or<float>("laser2XOff",laser2XOff_, 0.0);
         this->get_parameter_or<float>("laser2YOff",laser2YOff_, 0.0);
         this->get_parameter_or<float>("laser2Alpha",laser2Alpha_, 0.0);
-        this->get_parameter_or<bool>("show2",show2_, false);
+        this->get_parameter_or<bool>("show2",show2_, true);
 
         this->get_parameter_or<float>("robotFrontEnd", robotFrontEnd_, 0.0);
         this->get_parameter_or<float>("robotRearEnd", robotRearEnd_, 0.0);
