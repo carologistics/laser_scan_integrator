@@ -146,7 +146,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /robotino3base1/scan
+        Value: /robotinobase1/scan
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -189,6 +189,8 @@ Visualization Manager:
           Value: true
         laser_link:
           Value: true
+        odom:
+          Value: true
         wheel0_link:
           Value: true
         wheel1_link:
@@ -201,45 +203,46 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_link:
-          Inertial_Unit:
-            {}
-          SickLaser_Front:
-            {}
-          SickLaser_Rear:
-            {}
-          anglebracketusb_link:
-            {}
-          command_bridge_link:
-            {}
-          ir1_sensor:
-            {}
-          ir2_sensor:
-            {}
-          ir3_sensor:
-            {}
-          ir4_sensor:
-            {}
-          ir5_sensor:
-            {}
-          ir6_sensor:
-            {}
-          ir7_sensor:
-            {}
-          ir8_sensor:
-            {}
-          ir9_sensor:
-            {}
-          irsensor_merge:
-            {}
-          laser_link:
-            {}
-          wheel0_link:
-            {}
-          wheel1_link:
-            {}
-          wheel2_link:
-            {}
+        odom:
+          base_link:
+            Inertial_Unit:
+              {}
+            SickLaser_Front:
+              {}
+            SickLaser_Rear:
+              {}
+            anglebracketusb_link:
+              {}
+            command_bridge_link:
+              {}
+            ir1_sensor:
+              {}
+            ir2_sensor:
+              {}
+            ir3_sensor:
+              {}
+            ir4_sensor:
+              {}
+            ir5_sensor:
+              {}
+            ir6_sensor:
+              {}
+            ir7_sensor:
+              {}
+            ir8_sensor:
+              {}
+            ir9_sensor:
+              {}
+            irsensor_merge:
+              {}
+            laser_link:
+              {}
+            wheel0_link:
+              {}
+            wheel1_link:
+              {}
+            wheel2_link:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -272,10 +275,66 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotino/ir_scan_merged
+        Value: /robotinobase1/ir_scan_merged
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robotinobase1/robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        anglebracketusb_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        command_bridge_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel0_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel1_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        wheel2_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -337,10 +396,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 0.9147968888282776
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.053581714630127
+      Yaw: 2.2185866832733154
     Saved: ~
 Window Geometry:
   Displays:
