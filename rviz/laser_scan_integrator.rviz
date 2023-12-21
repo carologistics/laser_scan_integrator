@@ -5,9 +5,8 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Status1
         - /LaserScan1/Topic1
-      Splitter Ratio: 0.5
+      Splitter Ratio: 0.6706408262252808
     Tree Height: 613
   - Class: rviz_common/Selection
     Name: Selection
@@ -60,7 +59,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -78,10 +77,10 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotino/SickLaser_Front_Remaped
+        Value: /robotinobase1/SickLaser_Front_Remaped
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -94,7 +93,7 @@ Visualization Manager:
       Color: 0; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -112,10 +111,10 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotino/SickLaser_Rear_Remaped
+        Value: /robotinobase1/SickLaser_Rear_Remaped
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -128,7 +127,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -149,53 +148,53 @@ Visualization Manager:
         Value: /robotinobase1/scan
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        Inertial_Unit:
+        robotinobase1/Inertial_Unit:
           Value: true
-        SickLaser_Front:
+        robotinobase1/SickLaser_Front:
           Value: true
-        SickLaser_Rear:
+        robotinobase1/SickLaser_Rear:
           Value: true
-        anglebracketusb_link:
+        robotinobase1/anglebracketusb_link:
           Value: true
-        base_link:
+        robotinobase1/base_link:
           Value: true
-        command_bridge_link:
+        robotinobase1/command_bridge_link:
           Value: true
-        ir1_sensor:
+        robotinobase1/ir1_sensor:
           Value: true
-        ir2_sensor:
+        robotinobase1/ir2_sensor:
           Value: true
-        ir3_sensor:
+        robotinobase1/ir3_sensor:
           Value: true
-        ir4_sensor:
+        robotinobase1/ir4_sensor:
           Value: true
-        ir5_sensor:
+        robotinobase1/ir5_sensor:
           Value: true
-        ir6_sensor:
+        robotinobase1/ir6_sensor:
           Value: true
-        ir7_sensor:
+        robotinobase1/ir7_sensor:
           Value: true
-        ir8_sensor:
+        robotinobase1/ir8_sensor:
           Value: true
-        ir9_sensor:
+        robotinobase1/ir9_sensor:
           Value: true
-        irsensor_merge:
+        robotinobase1/irsensor_merge:
           Value: true
-        laser_link:
+        robotinobase1/laser_link:
           Value: true
-        odom:
+        robotinobase1/odom:
           Value: true
-        wheel0_link:
+        robotinobase1/wheel0_link:
           Value: true
-        wheel1_link:
+        robotinobase1/wheel1_link:
           Value: true
-        wheel2_link:
+        robotinobase1/wheel2_link:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -203,45 +202,45 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        odom:
-          base_link:
-            Inertial_Unit:
+        robotinobase1/odom:
+          robotinobase1/base_link:
+            robotinobase1/Inertial_Unit:
               {}
-            SickLaser_Front:
+            robotinobase1/SickLaser_Front:
               {}
-            SickLaser_Rear:
+            robotinobase1/SickLaser_Rear:
               {}
-            anglebracketusb_link:
+            robotinobase1/anglebracketusb_link:
               {}
-            command_bridge_link:
+            robotinobase1/command_bridge_link:
               {}
-            ir1_sensor:
+            robotinobase1/ir1_sensor:
               {}
-            ir2_sensor:
+            robotinobase1/ir2_sensor:
               {}
-            ir3_sensor:
+            robotinobase1/ir3_sensor:
               {}
-            ir4_sensor:
+            robotinobase1/ir4_sensor:
               {}
-            ir5_sensor:
+            robotinobase1/ir5_sensor:
               {}
-            ir6_sensor:
+            robotinobase1/ir6_sensor:
               {}
-            ir7_sensor:
+            robotinobase1/ir7_sensor:
               {}
-            ir8_sensor:
+            robotinobase1/ir8_sensor:
               {}
-            ir9_sensor:
+            robotinobase1/ir9_sensor:
               {}
-            irsensor_merge:
+            robotinobase1/irsensor_merge:
               {}
-            laser_link:
+            robotinobase1/laser_link:
               {}
-            wheel0_link:
+            robotinobase1/wheel0_link:
               {}
-            wheel1_link:
+            robotinobase1/wheel1_link:
               {}
-            wheel2_link:
+            robotinobase1/wheel2_link:
               {}
       Update Interval: 0
       Value: true
@@ -331,14 +330,14 @@ Visualization Manager:
         Inertia: false
         Mass: false
       Name: RobotModel
-      TF Prefix: ""
+      TF Prefix: robotinobase1
       Update Interval: 0
       Value: true
       Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: robotinobase1/base_link
     Frame Rate: 30
   Name: root
   Tools:

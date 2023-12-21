@@ -19,7 +19,7 @@ def generate_launch_description():
 
     #general parameter for the integrated laserscan
     pointCloudTopic = LaunchConfiguration('integratedTopic', default="/robotinobase1/scan")
-    pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="laser_link")
+    pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="robotinobase1/laser_link")
     
     #parameter for the first laserscan, feel free to duplicate and rename for other laserscans
     scanTopic1 = LaunchConfiguration('scanTopic1', default="/robotinobase1/SickLaser_Front_Remaped")
