@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /LaserScan1
         - /LaserScan1/Topic1
       Splitter Ratio: 0.6706408262252808
     Tree Height: 613
@@ -59,7 +60,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -77,10 +78,10 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotinobase1/SickLaser_Front_Remaped
+        Value: /robotinobase3/SickLaser_Front_Remaped
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -93,7 +94,7 @@ Visualization Manager:
       Color: 0; 255; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 0
@@ -111,10 +112,10 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotinobase1/SickLaser_Rear_Remaped
+        Value: /robotinobase3/SickLaser_Rear_Remaped
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -127,7 +128,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: false
+      Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -145,56 +146,56 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /robotinobase1/scan
+        Value: /robotinobase3/scan
       Use Fixed Frame: true
       Use rainbow: true
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        robotinobase1/Inertial_Unit:
+        robotinobase3/Inertial_Unit:
           Value: true
-        robotinobase1/SickLaser_Front:
+        robotinobase3/SickLaser_Front:
           Value: true
-        robotinobase1/SickLaser_Rear:
+        robotinobase3/SickLaser_Rear:
           Value: true
-        robotinobase1/anglebracketusb_link:
+        robotinobase3/anglebracketusb_link:
           Value: true
-        robotinobase1/base_link:
+        robotinobase3/base_link:
           Value: true
-        robotinobase1/command_bridge_link:
+        robotinobase3/command_bridge_link:
           Value: true
-        robotinobase1/ir1_sensor:
+        robotinobase3/ir1_sensor:
           Value: true
-        robotinobase1/ir2_sensor:
+        robotinobase3/ir2_sensor:
           Value: true
-        robotinobase1/ir3_sensor:
+        robotinobase3/ir3_sensor:
           Value: true
-        robotinobase1/ir4_sensor:
+        robotinobase3/ir4_sensor:
           Value: true
-        robotinobase1/ir5_sensor:
+        robotinobase3/ir5_sensor:
           Value: true
-        robotinobase1/ir6_sensor:
+        robotinobase3/ir6_sensor:
           Value: true
-        robotinobase1/ir7_sensor:
+        robotinobase3/ir7_sensor:
           Value: true
-        robotinobase1/ir8_sensor:
+        robotinobase3/ir8_sensor:
           Value: true
-        robotinobase1/ir9_sensor:
+        robotinobase3/ir9_sensor:
           Value: true
-        robotinobase1/irsensor_merge:
+        robotinobase3/irsensor_merge:
           Value: true
-        robotinobase1/laser_link:
+        robotinobase3/laser_link:
           Value: true
-        robotinobase1/odom:
+        robotinobase3/odom:
           Value: true
-        robotinobase1/wheel0_link:
+        robotinobase3/wheel0_link:
           Value: true
-        robotinobase1/wheel1_link:
+        robotinobase3/wheel1_link:
           Value: true
-        robotinobase1/wheel2_link:
+        robotinobase3/wheel2_link:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -202,45 +203,45 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        robotinobase1/odom:
-          robotinobase1/base_link:
-            robotinobase1/Inertial_Unit:
+        robotinobase3/odom:
+          robotinobase3/base_link:
+            robotinobase3/Inertial_Unit:
               {}
-            robotinobase1/SickLaser_Front:
+            robotinobase3/SickLaser_Front:
               {}
-            robotinobase1/SickLaser_Rear:
+            robotinobase3/SickLaser_Rear:
               {}
-            robotinobase1/anglebracketusb_link:
+            robotinobase3/anglebracketusb_link:
               {}
-            robotinobase1/command_bridge_link:
+            robotinobase3/command_bridge_link:
               {}
-            robotinobase1/ir1_sensor:
+            robotinobase3/ir1_sensor:
               {}
-            robotinobase1/ir2_sensor:
+            robotinobase3/ir2_sensor:
               {}
-            robotinobase1/ir3_sensor:
+            robotinobase3/ir3_sensor:
               {}
-            robotinobase1/ir4_sensor:
+            robotinobase3/ir4_sensor:
               {}
-            robotinobase1/ir5_sensor:
+            robotinobase3/ir5_sensor:
               {}
-            robotinobase1/ir6_sensor:
+            robotinobase3/ir6_sensor:
               {}
-            robotinobase1/ir7_sensor:
+            robotinobase3/ir7_sensor:
               {}
-            robotinobase1/ir8_sensor:
+            robotinobase3/ir8_sensor:
               {}
-            robotinobase1/ir9_sensor:
+            robotinobase3/ir9_sensor:
               {}
-            robotinobase1/irsensor_merge:
+            robotinobase3/irsensor_merge:
               {}
-            robotinobase1/laser_link:
+            robotinobase3/laser_link:
               {}
-            robotinobase1/wheel0_link:
+            robotinobase3/wheel0_link:
               {}
-            robotinobase1/wheel1_link:
+            robotinobase3/wheel1_link:
               {}
-            robotinobase1/wheel2_link:
+            robotinobase3/wheel2_link:
               {}
       Update Interval: 0
       Value: true
@@ -269,12 +270,12 @@ Visualization Manager:
       Size (m): 0.009999999776482582
       Style: Flat Squares
       Topic:
-        Depth: 5
+        Depth: 1000
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Best Effort
-        Value: /robotinobase1/ir_scan_merged
+        Value: /robotinobase3/ir_scan_merged
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -288,7 +289,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /robotinobase1/robot_description
+        Value: /robotinobase3/robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -330,14 +331,14 @@ Visualization Manager:
         Inertia: false
         Mass: false
       Name: RobotModel
-      TF Prefix: robotinobase1
+      TF Prefix: robotinobase3
       Update Interval: 0
       Value: true
       Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: robotinobase1/base_link
+    Fixed Frame: robotinobase3/base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -395,10 +396,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9147968888282776
+      Pitch: 0.6497972011566162
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.2185866832733154
+      Yaw: 2.178586721420288
     Saved: ~
 Window Geometry:
   Displays:

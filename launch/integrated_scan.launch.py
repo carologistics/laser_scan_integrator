@@ -3,20 +3,13 @@
 #   github.com/mich1342
 #   24/2/2022
 #
+
 from launch import LaunchDescription
 import launch_ros.actions
 from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
 
-from ament_index_python.packages import get_package_share_directory
-import os
-
 def generate_launch_description():
-    rviz_config_dir = os.path.join(
-            get_package_share_directory('laser_scan_integrator'),
-            'rviz',
-            'laser_scan_integrator.rviz')
-
     #general parameter for the integrated laserscan
     pointCloudTopic = LaunchConfiguration('integratedTopic', default="/robotinobase1/scan")
     pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="robotinobase1/laser_link")
@@ -150,12 +143,5 @@ def generate_launch_description():
             respawn=True,
             respawn_delay=2,
         ),
-        launch_ros.actions.Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config_dir],
-            output='screen'
-        )
+        
     ])
-

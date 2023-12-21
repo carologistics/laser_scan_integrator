@@ -3,26 +3,33 @@
 #   github.com/mich1342
 #   24/2/2022
 #
-
 from launch import LaunchDescription
 import launch_ros.actions
 from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument
 
+from ament_index_python.packages import get_package_share_directory
+import os
+
 def generate_launch_description():
+    
+    rviz_config_dir = os.path.join(
+            get_package_share_directory('laser_scan_integrator'),
+            'rviz', 'robotinobase1_rvizconfig.rviz')
+
     #general parameter for the integrated laserscan
-    pointCloudTopic = LaunchConfiguration('integratedTopic', default="/robotino3base1/scan")
-    pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="laser_link")
+    pointCloudTopic = LaunchConfiguration('integratedTopic', default="/robotinobase1/scan")
+    pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="robotinobase1/laser_link")
     
     #parameter for the first laserscan, feel free to duplicate and rename for other laserscans
-    scanTopic1 = LaunchConfiguration('scanTopic1', default="/robotino/SickLaser_Front_Remaped")
+    scanTopic1 = LaunchConfiguration('scanTopic1', default="/robotinobase1/SickLaser_Front_Remaped")
     laser1XOff = LaunchConfiguration('laser1XOff', default=0.0)
     laser1YOff = LaunchConfiguration('laser1YOff', default=0.0)
     laser1Alpha = LaunchConfiguration('laser1Alpha', default=0.0)
     show1 = LaunchConfiguration('show1', default=True)
 
     #parameter for the second laserscan, feel free to duplicate and rename for other laserscans
-    scanTopic2 = LaunchConfiguration('scanTopic2', default="/robotino/SickLaser_Rear_Remaped")
+    scanTopic2 = LaunchConfiguration('scanTopic2', default="/robotinobase1/SickLaser_Rear_Remaped")
     laser2XOff = LaunchConfiguration('laser2XOff', default=0.0)
     laser2YOff = LaunchConfiguration('laser2YOff', default=0.0)
     laser2Alpha = LaunchConfiguration('laser2Alpha', default=0.0)
@@ -116,8 +123,7 @@ def generate_launch_description():
             default_value=robotLeftEnd,
             description='desc',
         ),
-        
-        
+
         launch_ros.actions.Node(
             package='laser_scan_integrator',
             executable='laser_scan_integrator',
@@ -143,5 +149,12 @@ def generate_launch_description():
             respawn=True,
             respawn_delay=2,
         ),
-        
+        launch_ros.actions.Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', rviz_config_dir],
+            output='screen'
+        )
     ])
+
