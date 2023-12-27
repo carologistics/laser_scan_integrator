@@ -5,143 +5,167 @@
 #
 
 from launch import LaunchDescription
-import launch_ros.actions
+from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, LogInfo, OpaqueFunction, GroupAction
 from launch.actions import DeclareLaunchArgument
+from launch import LaunchDescription
+from ament_index_python.packages import get_package_share_directory
+import os
 
-def generate_launch_description():
+def launch_nodes_withconfig(context, *args, **kwargs):
+    namespace = LaunchConfiguration('namespace')
+
     #general parameter for the integrated laserscan
-    pointCloudTopic = LaunchConfiguration('integratedTopic', default="/robotinobase1/scan")
-    pointCloutFrameId = LaunchConfiguration('integratedFrameId', default="robotinobase1/laser_link")
+    pointCloudTopic = LaunchConfiguration('integratedTopic')
+    pointCloutFrameId = LaunchConfiguration('integratedFrameId')
     
     #parameter for the first laserscan, feel free to duplicate and rename for other laserscans
-    scanTopic1 = LaunchConfiguration('scanTopic1', default="/robotinobase1/SickLaser_Front_Remaped")
-    laser1XOff = LaunchConfiguration('laser1XOff', default=0.0)
-    laser1YOff = LaunchConfiguration('laser1YOff', default=0.0)
-    laser1Alpha = LaunchConfiguration('laser1Alpha', default=0.0)
-    show1 = LaunchConfiguration('show1', default=True)
+    scanTopic1 = LaunchConfiguration('scanTopic1')
+    laser1XOff = LaunchConfiguration('laser1XOff')
+    laser1YOff = LaunchConfiguration('laser1YOff')
+    laser1Alpha = LaunchConfiguration('laser1Alpha')
+    show1 = LaunchConfiguration('show1')
 
     #parameter for the second laserscan, feel free to duplicate and rename for other laserscans
-    scanTopic2 = LaunchConfiguration('scanTopic2', default="/robotinobase1/SickLaser_Rear_Remaped")
-    laser2XOff = LaunchConfiguration('laser2XOff', default=0.0)
-    laser2YOff = LaunchConfiguration('laser2YOff', default=0.0)
-    laser2Alpha = LaunchConfiguration('laser2Alpha', default=0.0)
-    show2 = LaunchConfiguration('show2', default=True)
+    scanTopic2 = LaunchConfiguration('scanTopic2')
+    laser2XOff = LaunchConfiguration('laser2XOff')
+    laser2YOff = LaunchConfiguration('laser2YOff')
+    laser2Alpha = LaunchConfiguration('laser2Alpha')
+    show2 = LaunchConfiguration('show2')
 
-    robotFrontEnd = LaunchConfiguration('robotFrontEnd', default=0.1)
-    robotRearEnd = LaunchConfiguration('robotRearEnd', default=0.1)
-    robotRightEnd = LaunchConfiguration('robotRightEnd', default=0.1)
-    robotLeftEnd = LaunchConfiguration('robotLeftEnd', default=0.1)
+    robotFrontEnd = LaunchConfiguration('robotFrontEnd')
+    robotRearEnd = LaunchConfiguration('robotRearEnd')
+    robotRightEnd = LaunchConfiguration('robotRightEnd')
+    robotLeftEnd = LaunchConfiguration('robotLeftEnd')
+    
+    launch_configuration = {}
+    for argname, argval in context.launch_configurations.items():
+        launch_configuration[argname] = argval
+    
+    load_nodes = GroupAction(
+        actions=[
+            Node(package='laser_scan_integrator',
+                    executable='laser_scan_integrator',
+                    parameters=[{
+                        'integratedTopic' : '/'+launch_configuration['namespace']+'/scan',
+                        'integratedFrameId' : launch_configuration['namespace']+'/laser_link',
+                        'scanTopic1' : '/'+launch_configuration['namespace']+'/SickLaser_Front_Remaped',
+                        'laser1XOff' : laser1XOff,
+                        'laser1YOff' : laser1YOff,
+                        'laser1Alpha' : laser1Alpha,
+                        'show1' : show1,
+                        'scanTopic2' : '/'+launch_configuration['namespace']+'/SickLaser_Rear_Remaped',
+                        'laser2XOff' : laser2XOff,
+                        'laser2YOff' : laser2YOff,
+                        'laser2Alpha' : laser2Alpha,
+                        'show2' : show2,
+                        'robotFrontEnd' : robotFrontEnd,
+                        'robotRearEnd' : robotRearEnd,
+                        'robotRightEnd' : robotRightEnd,
+                        'robotLeftEnd' : robotLeftEnd,
+                    }],
+                    namespace=namespace,
+                    output='screen',
+                    respawn=True,
+                    respawn_delay=2,),
+        ])
+    
+    return [load_nodes]
 
-    return LaunchDescription([
-        DeclareLaunchArgument(
-            'integratedTopic',
-            default_value=pointCloudTopic,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'integratedFrameId',
-            default_value=pointCloutFrameId,
-            description='desc',
-        ),
+def generate_launch_description():
+   
+    declare_namespace_argument = DeclareLaunchArgument('namespace',  default_value='',
+        description='Namespace of topics and services',
+    )
+    
+    declare_integratedtopic_argument = DeclareLaunchArgument('integratedTopic', default_value="/robotinobase1/scan",
+        description='Integrated topic to publish the laserscan to',
+    )
+    
+    declare_integratedframe_argument = DeclareLaunchArgument('integratedFrameId', default_value="robotinobase1/laser_link",
+        description='Integrated Frame ID',
+    )
+    
+    declare_scantopic1_argument = DeclareLaunchArgument('scanTopic1', default_value="/robotinobase1/SickLaser_Front_Remaped",
+        description='Scan topic of the first laserscan',
+    )
+    
+    declare_laser1xoff_argument = DeclareLaunchArgument('laser1XOff', default_value='0.0',
+        description='Offset of the first laserscan in x direction',
+    )
+    
+    declare_laser1yoff_argument = DeclareLaunchArgument('laser1YOff', default_value='0.0',
+        description='offset of the first laserscan in y direction',
+    )
+    
+    declare_laser1aoff_argument = DeclareLaunchArgument('laser1Alpha', default_value='0.0',
+        description='Rotation of the first laserscan in rad',
+    )
+    
+    declare_showlaser1_argument = DeclareLaunchArgument('show1', default_value='True',
+        description='Show the first laserscan in rviz',
+    )
+    
+    declare_scantopic2_argument = DeclareLaunchArgument('scanTopic2', default_value="/robotinobase1/SickLaser_Rear_Remaped",
+        description='Scan topic of the second laserscan',
+    )
+    
+    declare_laser2xoff_argument = DeclareLaunchArgument('laser2XOff', default_value='0.0',
+        description='Offset of the second laserscan in x direction',
+    )
+    
+    declare_laser2yoff_argument = DeclareLaunchArgument('laser2YOff', default_value='0.0',
+        description='offset of the second laserscan in y direction',
+    )
+    
+    declare_laser2aoff_argument = DeclareLaunchArgument('laser2Alpha', default_value='0.0',
+        description='Rotation of the second laserscan in rad',
+    )
+    
+    declare_showlaser2_argument = DeclareLaunchArgument('show2', default_value='True',
+        description='Show the second laserscan in rviz',
+    )
+    
+    declare_frontend_argument = DeclareLaunchArgument('robotFrontEnd', default_value='0.1',
+        description='robotFrontEnd',
+    )
+    
+    declare_rearend_argument = DeclareLaunchArgument('robotRearEnd', default_value='0.1',
+        description='robotRearEnd',
+    )
+    
+    declare_rightend_argument = DeclareLaunchArgument('robotRightEnd', default_value='0.1',
+        description='robotRightEnd',
+    )
+    
+    declare_leftend_argument = DeclareLaunchArgument('robotLeftEnd', default_value='0.1',
+        description='robotLeftEnd',
+    )
 
-        DeclareLaunchArgument(
-            'scanTopic1',
-            default_value=scanTopic1,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser1XOff',
-            default_value=laser1XOff,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser1YOff',
-            default_value=laser1YOff,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser1Alpha',
-            default_value=laser1Alpha,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'show1',
-            default_value=show1,
-            description='desc',
-        ),
+        # Create the launch description and populate
+    ld = LaunchDescription()
 
-        DeclareLaunchArgument(
-            'scanTopic2',
-            default_value=scanTopic2,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser2XOff',
-            default_value=laser2XOff,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser2YOff',
-            default_value=laser2YOff,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'laser2Alpha',
-            default_value=laser2Alpha,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'show2',
-            default_value=show2,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'robotFrontEnd',
-            default_value=robotFrontEnd,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'robotRearEnd',
-            default_value=robotRearEnd,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'robotRightEnd',
-            default_value=robotRightEnd,
-            description='desc',
-        ),
-        DeclareLaunchArgument(
-            'robotLeftEnd',
-            default_value=robotLeftEnd,
-            description='desc',
-        ),
-        
-        
-        launch_ros.actions.Node(
-            package='laser_scan_integrator',
-            executable='laser_scan_integrator',
-            parameters=[{
-                'integratedTopic' : pointCloudTopic,
-                'integratedFrameId' : pointCloutFrameId,
-                'scanTopic1' : scanTopic1,
-                'laser1XOff' : laser1XOff,
-                'laser1YOff' : laser1YOff,
-                'laser1Alpha' : laser1Alpha,
-                'show1' : show1,
-                'scanTopic2' : scanTopic2,
-                'laser2XOff' : laser2XOff,
-                'laser2YOff' : laser2YOff,
-                'laser2Alpha' : laser2Alpha,
-                'show2' : show2,
-                'robotFrontEnd' : robotFrontEnd,
-                'robotRearEnd' : robotRearEnd,
-                'robotRightEnd' : robotRightEnd,
-                'robotLeftEnd' : robotLeftEnd,
-            }],
-            output='screen',
-            respawn=True,
-            respawn_delay=2,
-        ),
-        
-    ])
+    # Declare the launch options
+    ld.add_action(declare_namespace_argument)
+    ld.add_action(declare_integratedtopic_argument)
+    ld.add_action(declare_integratedframe_argument)
+    ld.add_action(declare_scantopic1_argument)
+    ld.add_action(declare_laser1xoff_argument)
+    ld.add_action(declare_laser1yoff_argument)
+    ld.add_action(declare_laser1aoff_argument)
+    ld.add_action(declare_showlaser1_argument)
+    ld.add_action(declare_scantopic2_argument)
+    ld.add_action(declare_laser2xoff_argument)
+    ld.add_action(declare_laser2yoff_argument)
+    ld.add_action(declare_laser2aoff_argument)
+    ld.add_action(declare_showlaser2_argument)
+    ld.add_action(declare_frontend_argument)
+    ld.add_action(declare_rearend_argument)
+    ld.add_action(declare_rightend_argument)
+    ld.add_action(declare_leftend_argument)
+
+    # Add the actions to launch all of the localiztion nodes
+    ld.add_action(OpaqueFunction(function=launch_nodes_withconfig))
+
+    return ld
