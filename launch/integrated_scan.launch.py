@@ -50,12 +50,12 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                     parameters=[{
                         'integratedTopic' : '/'+launch_configuration['namespace']+'/scan',
                         'integratedFrameId' : launch_configuration['namespace']+'/laser_link',
-                        'scanTopic1' : '/'+launch_configuration['namespace']+'/SickLaser_Front_Remaped',
+                        'scanTopic1' : '/'+launch_configuration['namespace']+'/front/sick_scan/scan',
                         'laser1XOff' : laser1XOff,
                         'laser1YOff' : laser1YOff,
                         'laser1Alpha' : laser1Alpha,
                         'show1' : show1,
-                        'scanTopic2' : '/'+launch_configuration['namespace']+'/SickLaser_Rear_Remaped',
+                        'scanTopic2' : '/'+launch_configuration['namespace']+'/rear/sick_scan/scan',
                         'laser2XOff' : laser2XOff,
                         'laser2YOff' : laser2YOff,
                         'laser2Alpha' : laser2Alpha,
@@ -87,7 +87,7 @@ def generate_launch_description():
         description='Integrated Frame ID',
     )
     
-    declare_scantopic1_argument = DeclareLaunchArgument('scanTopic1', default_value="/robotinobase1/SickLaser_Front_Remaped",
+    declare_scantopic1_argument = DeclareLaunchArgument('scanTopic1', default_value="/robotinobase1/front/sick_scan/scan",
         description='Scan topic of the first laserscan',
     )
     
@@ -107,7 +107,7 @@ def generate_launch_description():
         description='Show the first laserscan in rviz',
     )
     
-    declare_scantopic2_argument = DeclareLaunchArgument('scanTopic2', default_value="/robotinobase1/SickLaser_Rear_Remaped",
+    declare_scantopic2_argument = DeclareLaunchArgument('scanTopic2', default_value="/robotinobase1/rear/sick_scan/scan",
         description='Scan topic of the second laserscan',
     )
     
