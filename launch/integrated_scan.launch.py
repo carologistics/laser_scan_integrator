@@ -2,7 +2,6 @@
 #   created by: Michael Jonathan (mich1342)
 #   github.com/mich1342
 #   24/2/2022
-#
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -55,7 +54,7 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                         'laser1YOff' : laser1YOff,
                         'laser1Alpha' : laser1Alpha,
                         'show1' : show1,
-                        'scanTopic2' : '/'+launch_configuration['namespace']+'/rear/sick_scan/scan',
+                        'scanTopic2' : '/'+launch_configuration['namespace']+'/back/sick_scan/scan',
                         'laser2XOff' : laser2XOff,
                         'laser2YOff' : laser2YOff,
                         'laser2Alpha' : laser2Alpha,
@@ -107,7 +106,7 @@ def generate_launch_description():
         description='Show the first laserscan in rviz',
     )
     
-    declare_scantopic2_argument = DeclareLaunchArgument('scanTopic2', default_value="/robotinobase1/rear/sick_scan/scan",
+    declare_scantopic2_argument = DeclareLaunchArgument('scanTopic2', default_value="/robotinobase1/back/sick_scan/scan",
         description='Scan topic of the second laserscan',
     )
     
