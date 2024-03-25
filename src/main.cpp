@@ -11,7 +11,7 @@
 
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_ros/create_timer_ros.h>
 
 #include <cmath>
@@ -182,8 +182,8 @@ private:
     integrated_msg_->angle_increment = laser1_->angle_increment;
     integrated_msg_->time_increment = laser1_->time_increment;
     integrated_msg_->scan_time = laser1_->scan_time;
-    integrated_msg_->range_min = laser1_->range_min;
-    integrated_msg_->range_max = laser1_->range_max;
+    integrated_msg_->range_min = RangeMin_;
+    integrated_msg_->range_max = RangeMax_;
     size_t i = 1;
     std::vector<float> temp_range;
     for (float angle = min_theta; angle < max_theta;
@@ -196,7 +196,11 @@ private:
            fabs(scan_data[i - 1][0] - angle) < laser1_->angle_increment)) {
         float range = interpolate(scan_data[i - 1][0], scan_data[i][0],
                                   scan_data[i - 1][1], scan_data[i][1], angle);
-        temp_range.push_back(range);
+        if (range <= RangeMin_) {
+          temp_range.push_back(std::numeric_limits<float>::infinity());
+        } else {
+          temp_range.push_back(range);
+        }
       } else {
         temp_range.push_back(std::numeric_limits<float>::infinity());
       }
@@ -242,6 +246,9 @@ private:
     this->declare_parameter<float>("robotRearEnd");
     this->declare_parameter<float>("robotRightEnd");
     this->declare_parameter<float>("robotLeftEnd");
+
+    this->declare_parameter<float>("rangeMin");
+    this->declare_parameter<float>("rangeMax");
   }
   void refresh_params() {
     this->get_parameter_or<std::string>("integratedTopic", integratedTopic_,
@@ -265,6 +272,9 @@ private:
     this->get_parameter_or<float>("robotRearEnd", robotRearEnd_, 0.0);
     this->get_parameter_or<float>("robotRightEnd", robotRightEnd_, 0.0);
     this->get_parameter_or<float>("robotLeftEnd", robotLeftEnd_, 0.0);
+
+    this->get_parameter_or<float>("rangeMin", RangeMin_, 0.0);
+    this->get_parameter_or<float>("rangeMax", RangeMax_, 100.0);
   }
 
   std::string topic1_, topic2_, integratedTopic_, integratedFrameId_;
@@ -272,6 +282,7 @@ private:
   float laser1XOff_, laser1YOff_, laser1Alpha_;
 
   float laser2XOff_, laser2YOff_, laser2Alpha_;
+  float RangeMin_, RangeMax_;
 
   float robotFrontEnd_, robotRearEnd_, robotRightEnd_, robotLeftEnd_;
 
