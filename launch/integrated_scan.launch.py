@@ -147,7 +147,7 @@ def generate_launch_description():
         description='robotLeftEnd',
     )
 
-    declare_rangeMin_argument = DeclareLaunchArgument('rangeMin', default_value='0.0',
+    declare_rangeMin_argument = DeclareLaunchArgument('rangeMin', default_value='0.225',
         description='rangeMin',
     )
 
