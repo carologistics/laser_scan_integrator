@@ -45,6 +45,9 @@ ament_target_dependencies(laser_scan_integrator
   tf2
   tf2_ros
   geometry_msgs
+  Boost
+  PCL
+  
 )
 install(DIRECTORY
   launch
