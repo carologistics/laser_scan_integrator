@@ -39,12 +39,16 @@ ament_target_dependencies(laser_scan_integrator
   rclcpp 
   std_msgs 
   sensor_msgs
+  tf2_sensor_msgs
   rcl_interfaces
   rcutils
   tf2_geometry_msgs
   tf2
   tf2_ros
   geometry_msgs
+  Boost
+  PCL
+  
 )
 install(DIRECTORY
   launch
