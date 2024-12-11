@@ -14,6 +14,13 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_ros/create_timer_ros.h>
 
+#include "laser_scan_integrator_msg/srv/toggle_segmentation.hpp"
+#include "laser_scan_integrator_msg/msg/line_segment.hpp"
+#include "laser_scan_integrator_msg/msg/line_segments.hpp"
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/extract_indices.h>
+
 #include <cmath>
 
 #include <algorithm>
@@ -32,6 +39,7 @@ struct LaserPointLess {
     return a.direction_ < b.direction_;
   }
 };
+
 
 class scanMerger : public rclcpp::Node {
 public:
@@ -58,9 +66,24 @@ public:
         this->get_node_base_interface(), this->get_node_timers_interface());
     tf2_->setCreateTimerInterface(timer_interface);
     tf2_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf2_);
+
+    line_segments_pub_ = this->create_publisher<laser_scan_integrator_msg::msg::LineSegments>(
+        "line_segments", rclcpp::SystemDefaultsQoS());
+
+    segmentation_enabled_ = true; // Direkt Klassenvariable setzen
+
+    segmentation_service_ = this->create_service<laser_scan_integrator_msg::srv::ToggleSegmentation>(
+        "toggle_segmentation",
+        std::bind(&scanMerger::handle_toggle_segmentation, this, std::placeholders::_1, std::placeholders::_2));
+
   }
 
 private:
+
+  bool segmentation_enabled_ = true; // Klassenvariable
+  rclcpp::Publisher<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr line_segments_pub_;
+  rclcpp::Service<laser_scan_integrator_msg::srv::ToggleSegmentation>::SharedPtr segmentation_service_;
+
   void scan_callback1(const sensor_msgs::msg::LaserScan::SharedPtr _msg) {
     laser1_ = _msg;
     if (laser2_) {
@@ -69,6 +92,102 @@ private:
   }
   void scan_callback2(const sensor_msgs::msg::LaserScan::SharedPtr _msg) {
     laser2_ = _msg;
+  }
+
+  void handle_toggle_segmentation(
+    const std::shared_ptr<laser_scan_integrator_msg::srv::ToggleSegmentation::Request> request,
+    std::shared_ptr<laser_scan_integrator_msg::srv::ToggleSegmentation::Response> response) {
+
+    segmentation_enabled_ = request->enable_segmentation;
+
+    if (segmentation_enabled_) {
+        response->success = true;
+        response->message = "Segmentation enabled.";
+        RCLCPP_INFO(this->get_logger(), "Segmentation has been enabled.");
+    } else {
+        response->success = true;
+        response->message = "Segmentation disabled.";
+        RCLCPP_INFO(this->get_logger(), "Segmentation has been disabled.");
+    }
+  }
+
+
+  // Punktwolke erstellen
+  pcl::PointCloud<pcl::PointXYZ>::Ptr laser_scan_to_pointcloud(
+      const sensor_msgs::msg::LaserScan::SharedPtr &scan) {
+      auto cloud = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(); // Verwende pcl::make_shared
+      for (size_t i = 0; i < scan->ranges.size(); ++i) {
+          float range = scan->ranges[i];
+          if (range >= scan->range_min && range <= scan->range_max) {
+              float angle = scan->angle_min + i * scan->angle_increment;
+              cloud->points.emplace_back(range * std::cos(angle), range * std::sin(angle), 0.0f);
+          }
+      }
+      return cloud;
+  }
+
+  // Liniensegmentierung
+  std::vector<laser_scan_integrator_msg::msg::LineSegment> detect_lines(
+      const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, float min_length, float max_length) {
+      std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
+
+      pcl::SACSegmentation<pcl::PointXYZ> seg;
+      seg.setOptimizeCoefficients(true);
+      seg.setModelType(pcl::SACMODEL_LINE);
+      seg.setMethodType(pcl::SAC_RANSAC);
+      seg.setDistanceThreshold(0.02);
+
+      pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+      pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+
+      auto cloud_copy = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(*cloud); // Verwende pcl::make_shared
+
+      while (cloud_copy->size() > 10) {
+          seg.setInputCloud(cloud_copy);
+          seg.segment(*inliers, *coefficients);
+
+          if (inliers->indices.empty()) {
+              break;
+          }
+
+          pcl::PointXYZ pt1, pt2;
+          float line_length = 0.0;
+
+          if (coefficients->values.size() >= 6) {
+              pt1.x = coefficients->values[0];
+              pt1.y = coefficients->values[1];
+              pt1.z = coefficients->values[2];
+
+              pt2.x = pt1.x + coefficients->values[3];
+              pt2.y = pt1.y + coefficients->values[4];
+              pt2.z = pt1.z + coefficients->values[5];
+
+              line_length = std::sqrt(std::pow(pt2.x - pt1.x, 2) +
+                                      std::pow(pt2.y - pt1.y, 2) +
+                                      std::pow(pt2.z - pt1.z, 2));
+          }
+
+          if (line_length >= min_length && line_length <= max_length) {
+              laser_scan_integrator_msg::msg::LineSegment line_msg;
+              line_msg.end_point1.x = pt1.x;
+              line_msg.end_point1.y = pt1.y;
+              line_msg.end_point1.z = pt1.z;
+              line_msg.end_point2.x = pt2.x;
+              line_msg.end_point2.y = pt2.y;
+              line_msg.end_point2.z = pt2.z;
+              line_msg.line_length = line_length;
+
+              detected_lines.push_back(line_msg);
+          }
+
+          pcl::ExtractIndices<pcl::PointXYZ> extract;
+          extract.setInputCloud(cloud_copy);
+          extract.setIndices(inliers);
+          extract.setNegative(true);
+          extract.filter(*cloud_copy);
+      }
+
+      return detected_lines;
   }
 
   void update_point_cloud_rgb() {
@@ -129,6 +248,7 @@ private:
       }
     }
 
+    //Second scanner
     count = 0;
     if (show2_) {
       for (float i = laser2_->angle_min; i <= laser2_->angle_max;
@@ -207,6 +327,20 @@ private:
     }
     integrated_msg_->ranges = temp_range;
     laser_scan_pub_->publish(*integrated_msg_);
+
+    if (segmentation_enabled_) {
+      // **Hier Integration der Linienerkennung**
+      auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
+      auto lines = detect_lines(pointcloud, 0, 5.85); // 80 cm mit Toleranz
+
+      // Linien in ein ROS-Message konvertieren
+      laser_scan_integrator_msg::msg::LineSegments lines_msg;
+      lines_msg.header = integrated_msg_->header;
+      lines_msg.segments = lines;
+
+      // Linien veröffentlichen
+      line_segments_pub_->publish(lines_msg);
+    }
   }
 
   float GET_R(float x, float y) { return sqrt(x * x + y * y); }
