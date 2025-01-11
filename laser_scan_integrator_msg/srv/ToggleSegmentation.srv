@@ -1,0 +1,5 @@
+bool enable_segmentation
+---
+bool success
+string message
+
