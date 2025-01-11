@@ -74,7 +74,7 @@ public:
     line_segments_pub_ = this->create_publisher<laser_scan_integrator_msg::msg::LineSegments>(
         "line_segments", rclcpp::SystemDefaultsQoS());
 
-    segmentation_enabled_ = false; // Direkt Klassenvariable setzen
+    segmentation_enabled_ = false; 
 
     segmentation_service_ = this->create_service<laser_scan_integrator_msg::srv::ToggleSegmentation>(
         "toggle_segmentation",
@@ -84,7 +84,7 @@ public:
 
 private:
 
-  bool segmentation_enabled_ = true; // Klassenvariable
+  bool segmentation_enabled_ = true; 
   rclcpp::Publisher<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr line_segments_pub_;
   rclcpp::Service<laser_scan_integrator_msg::srv::ToggleSegmentation>::SharedPtr segmentation_service_;
 
@@ -116,10 +116,10 @@ private:
   }
 
 
-  // Punktwolke erstellen
+  // Create point cloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr laser_scan_to_pointcloud(
       const sensor_msgs::msg::LaserScan::SharedPtr &scan) {
-      auto cloud = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(); // Verwende pcl::make_shared
+      auto cloud = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(); 
       for (size_t i = 0; i < scan->ranges.size(); ++i) {
           float range = scan->ranges[i];
           if (range >= scan->range_min && range <= scan->range_max) {
@@ -130,112 +130,114 @@ private:
       return cloud;
   }
 
-  // Liniensegmentierung
+  // Line segmentation
   std::vector<laser_scan_integrator_msg::msg::LineSegment> detect_lines(
-  const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, 
-  float target_length = 0.8f, 
-  float length_tolerance = 0.05f) {
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, 
+    float target_length = 0.8f, 
+    float length_tolerance = 0.05f) {
 
-    std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
+      std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
 
-    // Standardwert für die Distanztoleranz basierend auf einer Ziellänge von 80 cm
-    float distance_tolerance = 0.03f;
+      // Default value for distance tolerance, assuming a target length of 80 cm
+      float distance_tolerance = 0.03f;
 
-    // Konfiguration des SAC-Segmentierung
-    pcl::SACSegmentation<pcl::PointXYZ> seg;
-    //seg.setOptimizeCoefficients(true); Funkzioniert nich bekomme dann in der Ausgabe das:  [laser_scan_integrator-10] [pcl::SampleConsensusModelLine::optimizeModelCoefficients] Not enough inliers to refine/optimize the model's coefficients (2)! Returning the same coefficients.
-    seg.setModelType(pcl::SACMODEL_LINE);
-    seg.setMethodType(pcl::SAC_RANSAC);
-    seg.setDistanceThreshold(distance_tolerance);
+      // Configure SAC segmentation
+      pcl::SACSegmentation<pcl::PointXYZ> seg;
+      // seg.setOptimizeCoefficients(true); 
+      // This is commented out because it leads to the following error during execution:
+      // [laser_scan_integrator-10] [pcl::SampleConsensusModelLine::optimizeModelCoefficients] 
+      // Not enough inliers to refine/optimize the model's coefficients (2)! Returning the same coefficients.
+      seg.setModelType(pcl::SACMODEL_LINE);
+      seg.setMethodType(pcl::SAC_RANSAC);
+      seg.setDistanceThreshold(distance_tolerance);
 
-    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+      pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+      pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
 
-    // Eine Kopie der Punktwolke erstellen
-    auto cloud_copy = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(*cloud);
+      // Create a copy of the input point cloud to modify during processing
+      auto cloud_copy = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(*cloud);
 
-    while (cloud_copy->size() > 2) {
-      seg.setInputCloud(cloud_copy);
-      seg.segment(*inliers, *coefficients);
+      // Process the point cloud until fewer than 3 points remain (minimum for a line)
+      while (cloud_copy->size() > 2) {
+          seg.setInputCloud(cloud_copy);
+          seg.segment(*inliers, *coefficients);
 
-      if (inliers->indices.empty()) {
-        break; // Keine Linie gefunden
-      }
-
-      pcl::PointXYZ pt1, pt2;
-      float line_length = 0.0f;
-
-      // Hier wurden Änderungen vorgenommen
-      // Ursprünglich wurde der zweite Punkt durch Hinzufügen des Richtungsvektors bestimmt,
-      // was falsch war, da der Richtungsvektor unendlich lang ist.
-      // Stattdessen bestimmen wir nun anhand der Inlier-Punkte die tatsächlichen Endpunkte.
-      if (coefficients->values.size() >= 6) {
-        // Punkt auf der Linie
-        Eigen::Vector3f point_on_line(coefficients->values[0],
-                                      coefficients->values[1],
-                                      coefficients->values[2]);
-        // Richtungsvektor der Linie
-        Eigen::Vector3f direction(coefficients->values[3],
-                                  coefficients->values[4],
-                                  coefficients->values[5]);
-        direction.normalize();
-
-        // Min- und Max-Projektion bestimmen
-        float min_proj =  std::numeric_limits<float>::infinity();
-        float max_proj = -std::numeric_limits<float>::infinity();
-
-        for (auto idx : inliers->indices) {
-          const auto &p = cloud_copy->points[idx];
-          Eigen::Vector3f point(p.x, p.y, p.z);
-          float projection = direction.dot(point - point_on_line);
-
-          if (projection < min_proj) {
-            min_proj = projection;
+          // If no inliers are found, stop the loop
+          if (inliers->indices.empty()) {
+              break; // No line found
           }
-          if (projection > max_proj) {
-            max_proj = projection;
+
+          pcl::PointXYZ pt1, pt2;
+          float line_length = 0.0f;
+
+          if (coefficients->values.size() >= 6) {
+              // Point on the line
+              Eigen::Vector3f point_on_line(coefficients->values[0],
+                                            coefficients->values[1],
+                                            coefficients->values[2]);
+              // Direction vector of the line
+              Eigen::Vector3f direction(coefficients->values[3],
+                                        coefficients->values[4],
+                                        coefficients->values[5]);
+              direction.normalize();
+
+              // Determine the minimum and maximum projection onto the line
+              float min_proj =  std::numeric_limits<float>::infinity();
+              float max_proj = -std::numeric_limits<float>::infinity();
+
+              for (auto idx : inliers->indices) {
+                  const auto &p = cloud_copy->points[idx];
+                  Eigen::Vector3f point(p.x, p.y, p.z);
+                  float projection = direction.dot(point - point_on_line);
+
+                  if (projection < min_proj) {
+                      min_proj = projection;
+                  }
+                  if (projection > max_proj) {
+                      max_proj = projection;
+                  }
+              }
+
+              // Compute the actual endpoints of the line
+              Eigen::Vector3f start_point = point_on_line + min_proj * direction;
+              Eigen::Vector3f end_point   = point_on_line + max_proj * direction;
+
+              pt1.x = start_point.x();
+              pt1.y = start_point.y();
+              pt1.z = start_point.z();
+
+              pt2.x = end_point.x();
+              pt2.y = end_point.y();
+              pt2.z = end_point.z();
+
+              line_length = (end_point - start_point).norm();
           }
-        }
 
-        // Berechne tatsächliche Endpunkte
-        Eigen::Vector3f start_point = point_on_line + min_proj * direction;
-        Eigen::Vector3f end_point   = point_on_line + max_proj * direction;
+          // Check if the line length falls within the specified tolerance
+          if (std::abs(line_length - target_length) <= length_tolerance) {
+              laser_scan_integrator_msg::msg::LineSegment line_msg;
+              line_msg.end_point1.x = pt1.x;
+              line_msg.end_point1.y = pt1.y;
+              line_msg.end_point1.z = pt1.z;
+              line_msg.end_point2.x = pt2.x;
+              line_msg.end_point2.y = pt2.y;
+              line_msg.end_point2.z = pt2.z;
+              line_msg.line_length = line_length;
 
-        pt1.x = start_point.x();
-        pt1.y = start_point.y();
-        pt1.z = start_point.z();
+              detected_lines.push_back(line_msg);
+          }
 
-        pt2.x = end_point.x();
-        pt2.y = end_point.y();
-        pt2.z = end_point.z();
-
-        line_length = (end_point - start_point).norm();
+          // Remove the segmented points from the point cloud
+          pcl::ExtractIndices<pcl::PointXYZ> extract;
+          extract.setInputCloud(cloud_copy);
+          extract.setIndices(inliers);
+          extract.setNegative(true);
+          extract.filter(*cloud_copy);
       }
 
-      // Überprüfen, ob die Linie innerhalb der spezifizierten Toleranz liegt
-      if (std::abs(line_length - target_length) <= length_tolerance) {
-        laser_scan_integrator_msg::msg::LineSegment line_msg;
-        line_msg.end_point1.x = pt1.x;
-        line_msg.end_point1.y = pt1.y;
-        line_msg.end_point1.z = pt1.z;
-        line_msg.end_point2.x = pt2.x;
-        line_msg.end_point2.y = pt2.y;
-        line_msg.end_point2.z = pt2.z;
-        line_msg.line_length = line_length;
-
-        detected_lines.push_back(line_msg);
-      }
-
-      // Entfernen der segmentierten Punkte aus der Punktwolke
-      pcl::ExtractIndices<pcl::PointXYZ> extract;
-      extract.setInputCloud(cloud_copy);
-      extract.setIndices(inliers);
-      extract.setNegative(true);
-      extract.filter(*cloud_copy);
-    }
-
-    return detected_lines;
+      return detected_lines;
   }
+
 
 
 
@@ -378,18 +380,22 @@ private:
     laser_scan_pub_->publish(*integrated_msg_);
 
     if (segmentation_enabled_) {
-      // **Hier Integration der Linienerkennung**
+      // **Integration of line detection**
+
+      // Convert the integrated laser scan into a point cloud
       auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
-      auto lines = detect_lines(pointcloud, 0.8f, 0.05f); // 80 cm mit Toleranz
 
-      // Linien in ein ROS-Message konvertieren
+      // Detect lines in the point cloud with a target length of 80 cm and a tolerance of 5 cm
+      auto lines = detect_lines(pointcloud, 0.8f, 0.05f);
+
+      // Convert the detected lines into a ROS message format
       laser_scan_integrator_msg::msg::LineSegments lines_msg;
-      lines_msg.header = integrated_msg_->header;
-      lines_msg.segments = lines;
+      lines_msg.header = integrated_msg_->header; // Retain the original message header for consistency
+      lines_msg.segments = lines; // Add the detected line segments
 
-      // Linien veröffentlichen
+      // Publish the line segments as a ROS message
       line_segments_pub_->publish(lines_msg);
-    }
+    }    
   }
 
   float GET_R(float x, float y) { return sqrt(x * x + y * y); }
