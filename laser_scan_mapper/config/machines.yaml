@@ -1,0 +1,154 @@
+machines:
+  - name: "machine1"
+    translation:
+      x: 1.5
+      y: -0.5
+      z: -0.041
+    rotation:
+      x: 1
+      y: 0
+      z: 0
+      w: 0
+
+  - name: "machine2"
+    translation:
+      x: 1.5
+      y: 2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine3"
+    translation:
+      x: 1.5
+      y: -2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine4"
+    translation:
+      x: 4.5
+      y: -2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine5"
+    translation:
+      x: 4.5
+      y: 0.5
+      z: -0.041
+    rotation:
+      x: 1
+      y: 0
+      z: 0
+      w: 0
+
+  - name: "machine6"
+    translation:
+      x: 1.5
+      y: 1.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine7"
+    translation:
+      x: 5.5
+      y: -0.5
+      z: -0.041
+    rotation:
+      x: 1
+      y: 0
+      z: 0
+      w: 0
+
+  - name: "machine8"
+    translation:
+      x: -1.5
+      y: -0.5
+      z: -0.041
+    rotation:
+      x: 1
+      y: 0
+      z: 0
+      w: 0
+
+  - name: "machine9"
+    translation:
+      x: -1.5
+      y: 2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine10"
+    translation:
+      x: -1.5
+      y: -2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine11"
+    translation:
+      x: -4.5
+      y: -2.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine12"
+    translation:
+      x: -4.5
+      y: 0.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine13"
+    translation:
+      x: -1.5
+      y: 1.5
+      z: -0.041
+    rotation:
+      x: 0
+      y: 0
+      z: 1
+      w: 1.57
+
+  - name: "machine14"
+    translation:
+      x: 5.5
+      y: -0.5
+      z: -0.041
+    rotation:
+      x: 1
+      y: 0
+      z: 0
+      w: 0
