@@ -133,8 +133,8 @@ private:
   // Line segmentation
   std::vector<laser_scan_integrator_msg::msg::LineSegment> detect_lines(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, 
-    float target_length = 0.8f, 
-    float length_tolerance = 0.05f) {
+    float target_length = 0.7f, 
+    float length_tolerance = 0.02f) {
 
       std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
 
@@ -216,6 +216,7 @@ private:
           // Check if the line length falls within the specified tolerance
           if (std::abs(line_length - target_length) <= length_tolerance) {
               laser_scan_integrator_msg::msg::LineSegment line_msg;
+              line_msg.frame_id = "robotininobase1/laser_link";// CHange later
               line_msg.end_point1.x = pt1.x;
               line_msg.end_point1.y = pt1.y;
               line_msg.end_point1.z = pt1.z;
@@ -385,8 +386,8 @@ private:
       // Convert the integrated laser scan into a point cloud
       auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
 
-      // Detect lines in the point cloud with a target length of 80 cm and a tolerance of 5 cm
-      auto lines = detect_lines(pointcloud, 0.8f, 0.05f);
+      // Detect lines in the point cloud with a target length of 70 cm and a tolerance of 2 cm
+      auto lines = detect_lines(pointcloud, 0.7f, 0.02f);
 
       // Convert the detected lines into a ROS message format
       laser_scan_integrator_msg::msg::LineSegments lines_msg;

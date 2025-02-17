@@ -1,106 +1,150 @@
-#include <fstream>
-#include <sstream>
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+
+
+// YAML-CPP-Header
+#include <yaml-cpp/yaml.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+
 #include <string>
 #include <vector>
-#include <memory>
-#include <iostream>
+#include <fstream>
+#include <cmath> 
 
-#include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/transform_broadcaster.h"
-#include "geometry_msgs/msg/transform_stamped.hpp"
+/**
+ * Struktur zum Speichern einer Maschinen-Definition (Name + Pose)
+ */
+struct MachineDefinition
+{
+  std::string name;
+  double tx, ty, tz;
+  double rx, ry, rz, rw;
+};
 
-using namespace std::chrono_literals;
+void normalizeQuaternion(double &x, double &y, double &z, double &w) {
+  double norm = std::sqrt(x * x + y * y + z * z + w * w);
+  if (norm > 0.0) {
+    x /= norm;
+    y /= norm;
+    z /= norm;
+    w /= norm;
+  }
+}
 
-class TFPublisher : public rclcpp::Node
+class TfPublisherNode : public rclcpp::Node
 {
 public:
-  TFPublisher(const std::string & file_path)
+  TfPublisherNode()
   : Node("tf_publisher")
   {
-    tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-    parse_file(file_path);
+    // Statische TF-Broadcaster-Instanz
+    static_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
-    // Timer für das periodische Veröffentlichen
-    timer_ = this->create_wall_timer(
-      500ms, std::bind(&TFPublisher::publish_transforms, this));
+    // Standard-Pfad zur YAML-Datei
+    std::string yaml_path = ament_index_cpp::get_package_share_directory("laser_scan_mapper") + "/config/machines.yaml";
+
+
+    // Maschinen-Definitionen aus YAML einlesen
+    std::vector<MachineDefinition> machines = loadMachinesFromYAML(yaml_path);
+
+    // Erzeuge und sende die statischen TFs
+    std::vector<geometry_msgs::msg::TransformStamped> transforms;
+    transforms.reserve(machines.size());
+
+    // Wir nehmen an, dass alle Maschinen in Bezug auf einen "world"-Frame liegen
+    // (oder "map", "odom", o.ä. - je nach Konvention)
+    std::string parent_frame_id = "map";
+
+    for (const auto &m : machines) {
+      geometry_msgs::msg::TransformStamped ts;
+      ts.header.stamp = this->now();
+      ts.header.frame_id = "map";
+      ts.child_frame_id = m.name;
+
+      ts.transform.translation.x = m.tx;
+      ts.transform.translation.y = m.ty;
+      ts.transform.translation.z = m.tz;
+
+      // Normalisierung des Quaternions
+      double rx = m.rx, ry = m.ry, rz = m.rz, rw = m.rw;
+      normalizeQuaternion(rx, ry, rz, rw);
+
+      ts.transform.rotation.x = rx;
+      ts.transform.rotation.y = ry;
+      ts.transform.rotation.z = rz;
+      ts.transform.rotation.w = rw;
+
+      transforms.push_back(ts);
+    }   
+
+    // Sende alle Transforms auf einmal
+    static_broadcaster_->sendTransform(transforms);
+
+    RCLCPP_INFO(this->get_logger(), 
+      "Veröffentliche %zu statische Maschinen-Frames relativ zu '%s'. Node läuft ...",
+      transforms.size(), parent_frame_id.c_str());
   }
 
 private:
-  struct MachineData
+  /**
+   * Liest die Maschinen-Definitionen aus einer YAML-Datei ein.
+   * @param path Pfad zur YAML-Datei
+   * @return Vektor mit allen gelesenen Maschinen (Name + Pose)
+   */
+  std::vector<MachineDefinition> loadMachinesFromYAML(const std::string &path)
   {
-    std::string name;
-    double tx, ty, tz;  // Translation
-    double qx, qy, qz, qw; // Rotation (Quaternion)
-  };
+    std::vector<MachineDefinition> machines;
 
-  std::vector<MachineData> machines_;
-  rclcpp::TimerBase::SharedPtr timer_;
-  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    try {
+      YAML::Node config = YAML::LoadFile(path);
+      if (!config["machines"]) {
+        RCLCPP_ERROR(this->get_logger(), 
+          "Keine 'machines'-Sektion in der YAML-Datei gefunden: %s", path.c_str());
+        return machines;
+      }
 
-  void parse_file(const std::string & file_path)
-  {
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-      RCLCPP_ERROR(this->get_logger(), "Could not open file: %s", file_path.c_str());
-      return;
+      // Liste von Maschinen durchgehen
+      for (const auto &machine_node : config["machines"]) {
+        MachineDefinition mdef;
+        mdef.name = machine_node["name"].as<std::string>();
+
+        auto trans = machine_node["translation"];
+        mdef.tx = trans["x"].as<double>();
+        mdef.ty = trans["y"].as<double>();
+        mdef.tz = trans["z"].as<double>();
+
+        auto rot = machine_node["rotation"];
+        mdef.rx = rot["x"].as<double>();
+        mdef.ry = rot["y"].as<double>();
+        mdef.rz = rot["z"].as<double>();
+        mdef.rw = rot["w"].as<double>();
+
+        machines.push_back(mdef);
+      }
+    } catch (const YAML::Exception &e) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Fehler beim Laden der YAML-Datei '%s': %s",
+        path.c_str(), e.what());
     }
 
-    std::string line;
-    std::getline(file, line); // Überspringe die Kopfzeile
-
-    while (std::getline(file, line)) {
-      std::istringstream stream(line);
-      MachineData data;
-      char ignore; // Für die Klammern und Leerzeichen
-
-      stream >> data.name;
-      stream >> ignore >> data.tx >> data.ty >> data.tz >> ignore; // Translation
-      stream >> ignore >> data.qx >> data.qy >> data.qz >> data.qw >> ignore; // Rotation
-
-      machines_.push_back(data);
-    }
-
-    RCLCPP_INFO(this->get_logger(), "Parsed %lu machines from file.", machines_.size());
+    return machines;
   }
 
-  void publish_transforms()
-  {
-    for (const auto & machine : machines_) {
-      geometry_msgs::msg::TransformStamped transform;
-
-      // Header
-      transform.header.stamp = this->get_clock()->now();
-      transform.header.frame_id = "map";
-      transform.child_frame_id = machine.name;
-
-      // Translation
-      transform.transform.translation.x = machine.tx;
-      transform.transform.translation.y = machine.ty;
-      transform.transform.translation.z = machine.tz;
-
-      // Rotation
-      transform.transform.rotation.x = machine.qx;
-      transform.transform.rotation.y = machine.qy;
-      transform.transform.rotation.z = machine.qz;
-      transform.transform.rotation.w = machine.qw;
-
-      // Transformation veröffentlichen
-      tf_broadcaster_->sendTransform(transform);
-
-      RCLCPP_INFO(this->get_logger(), "Published transform for %s", machine.name.c_str());
-    }
-  }
+private:
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster_;
 };
 
-int main(int argc, char * argv[])
+int main(int argc, char *argv[])
 {
-  if (argc < 2) {
-    std::cerr << "Usage: tf_publisher <file_path>" << std::endl;
-    return 1;
-  }
-
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<TFPublisher>(argv[1]));
+
+  // Node erzeugen
+  auto node = std::make_shared<TfPublisherNode>();
+
+  // Node am Leben halten
+  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }
