@@ -1,0 +1,13 @@
+mapper:
+  ros__parameters:
+    machine_names:
+      - M-CS1
+      - M-DS
+      - C-DS
+      - C-BS
+      - C-RS1
+      - M-RS2
+      - M-BS
+      - C-CS1
+      - M-RS1
+      - C-RS2
