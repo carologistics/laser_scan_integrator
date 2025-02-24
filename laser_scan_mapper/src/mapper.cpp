@@ -91,7 +91,7 @@ private:
   // (Hinweis: Da y nun die Fahrtrichtung ist, entspricht machine_width_ der lateralen Ausdehnung entlang der x-Achse.)
   const double machine_width_      = 0.35;  // 35 cm
   const double position_tolerance_ = 0.3;   // z. B. 30 cm
-  const double angle_tolerance_    = 3;     // z. B. 3 rad
+  const double angle_tolerance_    = 0.4;     // z. B. 0.4 rad ~ 23°
 
   // Für Maschinen-Rechteck:
   // (Angepasst: Die Länge (Fahrtrichtung) liegt nun entlang der y-Achse und die Breite entlang der x-Achse.)

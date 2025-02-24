@@ -6,9 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1/Frames1
         - /TF1/Tree1
-        - /Marker1
         - /Marker1/Topic1
         - /Marker2/Topic1
       Splitter Ratio: 0.7823529243469238
@@ -65,24 +63,18 @@ Visualization Manager:
           Value: false
         C-BS-OUTPUT:
           Value: false
-        C-BS_corrected:
-          Value: true
         C-CS1:
           Value: true
         C-CS1-INPUT:
           Value: false
         C-CS1-OUTPUT:
           Value: false
-        C-CS1_corrected:
-          Value: true
         C-DS:
           Value: true
         C-DS-INPUT:
           Value: false
         C-DS-OUTPUT:
           Value: false
-        C-DS_corrected:
-          Value: true
         C-RS1:
           Value: false
         C-RS1-INPUT:
@@ -90,13 +82,17 @@ Visualization Manager:
         C-RS1-OUTPUT:
           Value: false
         C-RS2:
-          Value: false
+          Value: true
+        C-RS2-CORRECTED:
+          Value: true
         C-RS2-INPUT:
           Value: false
         C-RS2-OUTPUT:
           Value: false
         M-BS:
-          Value: false
+          Value: true
+        M-BS-CORRECTED:
+          Value: true
         M-BS-INPUT:
           Value: false
         M-BS-OUTPUT:
@@ -114,7 +110,9 @@ Visualization Manager:
         M-DS-OUTPUT:
           Value: false
         M-RS1:
-          Value: false
+          Value: true
+        M-RS1-CORRECTED:
+          Value: true
         M-RS1-INPUT:
           Value: false
         M-RS1-OUTPUT:
@@ -125,8 +123,6 @@ Visualization Manager:
           Value: false
         M-RS2-OUTPUT:
           Value: false
-        M-RS2_corrected:
-          Value: true
         WAIT-C-BS-INPUT:
           Value: false
         WAIT-C-BS-OUTPUT:
@@ -177,8 +173,24 @@ Visualization Manager:
           Value: false
         map:
           Value: false
+        robotinobase2/anglebracketusb_link:
+          Value: false
+        robotinobase2/back_laser_link:
+          Value: false
         robotinobase2/base_link:
           Value: true
+        robotinobase2/command_bridge_link:
+          Value: false
+        robotinobase2/front_laser_link:
+          Value: false
+        robotinobase2/imu_link:
+          Value: false
+        robotinobase2/irpcl_link:
+          Value: false
+        robotinobase2/irscan_link:
+          Value: false
+        robotinobase2/laser_link:
+          Value: false
         robotinobase2/odom:
           Value: false
         robotinobase2/wheel0_link:
@@ -200,23 +212,17 @@ Visualization Manager:
             {}
           C-BS-OUTPUT:
             {}
-          C-BS_corrected:
-            {}
           C-CS1:
             {}
           C-CS1-INPUT:
             {}
           C-CS1-OUTPUT:
             {}
-          C-CS1_corrected:
-            {}
           C-DS:
             {}
           C-DS-INPUT:
             {}
           C-DS-OUTPUT:
-            {}
-          C-DS_corrected:
             {}
           C-RS1:
             {}
@@ -226,11 +232,15 @@ Visualization Manager:
             {}
           C-RS2:
             {}
+          C-RS2-CORRECTED:
+            {}
           C-RS2-INPUT:
             {}
           C-RS2-OUTPUT:
             {}
           M-BS:
+            {}
+          M-BS-CORRECTED:
             {}
           M-BS-INPUT:
             {}
@@ -250,6 +260,8 @@ Visualization Manager:
             {}
           M-RS1:
             {}
+          M-RS1-CORRECTED:
+            {}
           M-RS1-INPUT:
             {}
           M-RS1-OUTPUT:
@@ -259,8 +271,6 @@ Visualization Manager:
           M-RS2-INPUT:
             {}
           M-RS2-OUTPUT:
-            {}
-          M-RS2_corrected:
             {}
           WAIT-C-BS-INPUT:
             {}
@@ -312,6 +322,22 @@ Visualization Manager:
             {}
           robotinobase2/odom:
             robotinobase2/base_link:
+              robotinobase2/anglebracketusb_link:
+                {}
+              robotinobase2/back_laser_link:
+                {}
+              robotinobase2/command_bridge_link:
+                {}
+              robotinobase2/front_laser_link:
+                {}
+              robotinobase2/imu_link:
+                {}
+              robotinobase2/irpcl_link:
+                {}
+              robotinobase2/irscan_link:
+                {}
+              robotinobase2/laser_link:
+                {}
               robotinobase2/wheel0_link:
                 {}
               robotinobase2/wheel1_link:
@@ -321,7 +347,7 @@ Visualization Manager:
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Marker
       Namespaces:
         {}
@@ -332,12 +358,12 @@ Visualization Manager:
         History Policy: Keep All
         Reliability Policy: Best Effort
         Value: /mapped_segments
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Marker
-      Enabled: true
+      Enabled: false
       Name: Marker
       Namespaces:
-        machine_rectangles: true
+        {}
       Topic:
         Depth: 20
         Durability Policy: Volatile
@@ -345,7 +371,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /machine_markers
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -392,7 +418,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 10.842185020446777
+      Distance: 13.76181411743164
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
