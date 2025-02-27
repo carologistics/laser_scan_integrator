@@ -24,6 +24,8 @@
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/extract_indices.h>
+#include "visualization_msgs/msg/marker.hpp"
+#include <pcl/search/kdtree.h>
 
 #include <cmath>
 
@@ -79,6 +81,8 @@ public:
     segmentation_service_ = this->create_service<laser_scan_integrator_msg::srv::ToggleSegmentation>(
         "toggle_segmentation",
         std::bind(&scanMerger::handle_toggle_segmentation, this, std::placeholders::_1, std::placeholders::_2));
+    marker_pub_ = this ->create_publisher<visualization_msgs::msg::Marker>("line_markers",10);
+    pub_pointcloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("pointcloud_out", 10);
 
   }
 
@@ -87,6 +91,8 @@ private:
   bool segmentation_enabled_ = true; 
   rclcpp::Publisher<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr line_segments_pub_;
   rclcpp::Service<laser_scan_integrator_msg::srv::ToggleSegmentation>::SharedPtr segmentation_service_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_pointcloud_;
 
   void scan_callback1(const sensor_msgs::msg::LaserScan::SharedPtr _msg) {
     laser1_ = _msg;
@@ -130,6 +136,23 @@ private:
       return cloud;
   }
 
+  void publishPointCloud(const sensor_msgs::msg::LaserScan::SharedPtr &scan){
+	    // 1. LaserScan -> pcl::PointCloud<pcl::PointXYZ>
+	    auto pcl_cloud = laser_scan_to_pointcloud(scan);
+
+	    // 2. pcl::PointCloud -> sensor_msgs::msg::PointCloud2
+	    sensor_msgs::msg::PointCloud2 ros_cloud;
+	    pcl::toROSMsg(*pcl_cloud, ros_cloud);
+
+	    // 3. Header setzen
+	    ros_cloud.header.stamp = this->now();
+	    ros_cloud.header.frame_id =  scan->header.frame_id;
+	    // Wähle das Frame so, dass es zu deiner TF-Tree-Konfiguration passt
+
+	    // 4. Veröffentlichen
+	    pub_pointcloud_->publish(ros_cloud);
+}
+
   // Line segmentation
   std::vector<laser_scan_integrator_msg::msg::LineSegment> detect_lines(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, 
@@ -141,16 +164,22 @@ private:
       // Default value for distance tolerance, assuming a target length of 80 cm
       float distance_tolerance = 0.03f;
 
+
       // Configure SAC segmentation
       pcl::SACSegmentation<pcl::PointXYZ> seg;
-      // seg.setOptimizeCoefficients(true); 
+      seg.setOptimizeCoefficients(true); 
       // This is commented out because it leads to the following error during execution:
       // [laser_scan_integrator-10] [pcl::SampleConsensusModelLine::optimizeModelCoefficients] 
       // Not enough inliers to refine/optimize the model's coefficients (2)! Returning the same coefficients.
       seg.setModelType(pcl::SACMODEL_LINE);
       seg.setMethodType(pcl::SAC_RANSAC);
       seg.setDistanceThreshold(distance_tolerance);
+      seg.setMaxIterations(1000);
+      // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>()); 
+      // seg.setSamplesMaxDist(0.4, tree); 
 
+      
+      // Meomeor leak noch mal drüber schauen liebr einen unique pointer erstellen
       pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
       pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
 
@@ -385,7 +414,7 @@ private:
 
       // Convert the integrated laser scan into a point cloud
       auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
-
+      //publishPointCloud(integrated_msg_);
       // Detect lines in the point cloud with a target length of 70 cm and a tolerance of 2 cm
       auto lines = detect_lines(pointcloud, 0.7f, 0.02f);
 
@@ -396,6 +425,7 @@ private:
 
       // Publish the line segments as a ROS message
       line_segments_pub_->publish(lines_msg);
+      publishLineMarkers(lines, integrated_msg_->header);
     }    
   }
 
