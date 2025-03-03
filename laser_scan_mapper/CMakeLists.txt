@@ -21,14 +21,7 @@ find_package(visualization_msgs REQUIRED)
 
 
 ###Test###
-add_executable(test_listner src/test.cpp)
-ament_target_dependencies(
-    test_listner
-    geometry_msgs
-    rclcpp
-    tf2
-    tf2_ros
-)
+
 ##########
 
 
