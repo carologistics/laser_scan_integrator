@@ -20,10 +20,6 @@ find_package(Eigen3 REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 
-###Test###
-
-##########
-
 
 add_executable(tf_publisher src/tf_publisher.cpp)
 ament_target_dependencies(
@@ -54,12 +50,6 @@ target_link_libraries(mapper
   tf2_ros::tf2_ros
   yaml-cpp::yaml-cpp
 )
-
-###Test###
-install(TARGETS
-    test_listner
-    DESTINATION lib/${PROJECT_NAME})
-##########
 
 install(TARGETS 
 tf_publisher 
