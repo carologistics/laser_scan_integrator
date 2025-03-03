@@ -31,6 +31,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(laser_scan_integrator_msg REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 
 # Include directories
@@ -56,6 +57,7 @@ ament_target_dependencies(laser_scan_integrator
   PCL
   pcl_conversions
   laser_scan_integrator_msg
+  visualization_msgs
 )
 
 # Link PCL librariesrosidl_generate_interfaces
