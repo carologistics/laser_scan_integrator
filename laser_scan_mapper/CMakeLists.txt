@@ -18,6 +18,7 @@ find_package(ament_index_cpp REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(visualization_msgs REQUIRED)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 
 
