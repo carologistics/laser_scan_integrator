@@ -455,7 +455,7 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 		}
 
         laser_scan_integrator_msg::msg::LineSegment line_msg;
-        line_msg.frame_id = "robotininobase1/laser_link";// CHange later
+        line_msg.frame_id = integratedFrameId_;// CHange later
         line_msg.end_point1.x = pt1.x;
         line_msg.end_point1.y = pt1.y;
         line_msg.end_point1.z = pt1.z;
@@ -474,7 +474,49 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 	return detected_lines;
 }
 
+// Methode zum Erstellen und sofortigen Publizieren von Linien-Markern in RViz
+void publishLineMarkers(const std::vector<laser_scan_integrator_msg::msg::LineSegment> &lines,
+                        const std_msgs::msg::Header &header)
+{
+  for (const auto &line : lines) {
+    visualization_msgs::msg::Marker marker;
+    marker.header = header;                  // Übernahme des Headers
+    marker.ns = "line_markers";              // Namespace für die Linien-Marker
+    static int marker_id = 0;                // Eindeutige ID für jeden Marker
+    marker.id = marker_id++;
+    marker.type = visualization_msgs::msg::Marker::LINE_LIST; // Verwendung von LINE_LIST, da je Marker zwei Punkte definiert
+    marker.action = visualization_msgs::msg::Marker::ADD;
 
+    // Skalierung: Die Breite der Linie
+    marker.scale.x = 0.05; // Passen Sie diesen Wert bei Bedarf an
+
+    // Farbe: Beispielweise ein kräftiges Grün (voll opak)
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    marker.color.a = 1.0;
+
+    // Unbegrenzte Lebensdauer
+    marker.lifetime = rclcpp::Duration(0, 0);
+
+    // Definieren der Endpunkte der Linie
+    geometry_msgs::msg::Point p1, p2;
+    p1.x = line.end_point1.x;
+    p1.y = line.end_point1.y;
+    p1.z = line.end_point1.z;
+    p2.x = line.end_point2.x;
+    p2.y = line.end_point2.y;
+    p2.z = line.end_point2.z;
+
+    marker.points.push_back(p1);
+    marker.points.push_back(p2);
+
+    // Publizieren des Markers
+    marker_pub_->publish(marker);
+    RCLCPP_INFO(this->get_logger(), "Linienmarker %d veröffentlicht: (%.3f, %.3f) bis (%.3f, %.3f)", 
+                marker.id, p1.x, p1.y, p2.x, p2.y);
+  }
+}
 
 
   void update_point_cloud_rgb() {pcl::PointCloud<pcl::PointXYZ>::Ptr
@@ -632,7 +674,7 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 
       // Publish the line segments as a ROS message
       line_segments_pub_->publish(lines_msg);
-      //publishLineMarkers(lines, integrated_msg_->header);
+      publishLineMarkers(lines, integrated_msg_->header);
     }    
   }
 
