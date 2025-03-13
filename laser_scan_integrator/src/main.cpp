@@ -51,6 +51,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <random>
+
 
 struct LaserPoint {
   float direction_;
@@ -303,6 +305,33 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 
 	typename pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr test_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+  // Zufallsgenerator initialisieren
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> dist_x(-2.0f, 2.0f);  // x-Werte von -2 bis 2 m
+  std::uniform_real_distribution<float> dist_y(-2.0f, 2.0f);  // y-Werte von -2 bis 2 m
+
+  
+  for (float x = 0.0f; x <= 1.0f; x += 0.01f) {
+      test_cloud->push_back(pcl::PointXYZ(x, 0.0f, 0.0f));
+  }
+
+  // Linie 2 (y = 2.0, parallel zur ersten Linie, 2 m versetzt)
+  for (float x = 2.0f; x <= 3.0f; x += 0.01f) {
+      test_cloud->push_back(pcl::PointXYZ(x, 0.0f, 0.0f)); 
+  }
+
+  // 200 zufällige Störpunkte generieren
+  for (int i = 0; i < 200; ++i) {
+      float rand_x = dist_x(gen);
+      float rand_y = dist_y(gen);
+      test_cloud->push_back(pcl::PointXYZ(rand_x, rand_y, 0.0f));
+  }
+
+
+
 	{
 		// Erase non-finite points
 		pcl::PassThrough<pcl::PointXYZ> passthrough;
@@ -449,10 +478,11 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 
         line_length = (end_point - start_point).norm();
         
-        if (line_length == 0 || (min_length >= 0 && line_length < min_length)
-		    || (max_length >= 0 && line_length > max_length)) {
-			continue;
-		}
+        // if (line_length == 0 || (min_length >= 0 && line_length < min_length)
+       //                   || (max_length >= 0 && line_length > max_length)) {
+       if (line_length == 0 || (line_length < 0.6) || (line_length > 0.8)){
+        continue;
+                }
 
         laser_scan_integrator_msg::msg::LineSegment line_msg;
         line_msg.frame_id = integratedFrameId_;// CHange later
