@@ -46,7 +46,7 @@ public:
   {
     // YAML laden (über den Share-Pfad)
     std::string share_dir = ament_index_cpp::get_package_share_directory("laser_scan_mapper");
-    std::string yaml_file = share_dir + "/config/mapper_params.yaml";
+    std::string yaml_file = share_dir + "mapper_params.yaml";
     RCLCPP_INFO(this->get_logger(), "Lade Maschinenliste aus YAML: %s", yaml_file.c_str());
 
     if (!loadMachineNamesFromYaml(yaml_file, machine_names_)) {
