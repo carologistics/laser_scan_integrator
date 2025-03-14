@@ -305,33 +305,6 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 
 	typename pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr test_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-
-  // Zufallsgenerator initialisieren
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<float> dist_x(-2.0f, 2.0f);  // x-Werte von -2 bis 2 m
-  std::uniform_real_distribution<float> dist_y(-2.0f, 2.0f);  // y-Werte von -2 bis 2 m
-
-  
-  for (float x = 0.0f; x <= 1.0f; x += 0.01f) {
-      test_cloud->push_back(pcl::PointXYZ(x, 0.0f, 0.0f));
-  }
-
-  // Linie 2 (y = 2.0, parallel zur ersten Linie, 2 m versetzt)
-  for (float x = 2.0f; x <= 3.0f; x += 0.01f) {
-      test_cloud->push_back(pcl::PointXYZ(x, 0.0f, 0.0f)); 
-  }
-
-  // 200 zufällige Störpunkte generieren
-  for (int i = 0; i < 200; ++i) {
-      float rand_x = dist_x(gen);
-      float rand_y = dist_y(gen);
-      test_cloud->push_back(pcl::PointXYZ(rand_x, rand_y, 0.0f));
-  }
-
-
-
 	{
 		// Erase non-finite points
 		pcl::PassThrough<pcl::PointXYZ> passthrough;
@@ -361,6 +334,10 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 		seg.setSamplesMaxDist(segm_sample_max_dist, search);
 		seg.setInputCloud(in_cloud);
 		seg.segment(*inliers, *coeff);
+		RCLCPP_INFO(this->get_logger(), "Inliers (Anzahl: %zu):", inliers->indices.size());
+		for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
+  			RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i, inliers->indices[i]);
+		}
 		if (inliers->indices.size() == 0) {
 			// no line found
 			break;
@@ -404,7 +381,7 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 
 		// re-calculate coefficients based on line cluster only
 		if (line_cluster_index) {
-			pcl::SACSegmentation<pcl::PointXYZ> segc;
+		pcl::SACSegmentation<pcl::PointXYZ> segc;
 			segc.setOptimizeCoefficients(true);
 			segc.setModelType(pcl::SACMODEL_LINE);
 			segc.setMethodType(pcl::SAC_RANSAC);
@@ -415,6 +392,12 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 			pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
 			segc.segment(*tmp_index, *coeff);
 			*line_cluster_index = *tmp_index;
+			RCLCPP_INFO(this->get_logger(), "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
+			for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
+        	                RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i, tmp_index->indices[i]);
+	                }
+
+
 		}
 
 		// Remove the linear or clustered inliers, extract the rest
@@ -431,9 +414,9 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
 		extract.filter(*cloud_f);
 		*in_cloud = *cloud_f;
 
-		if (!line_cluster_index || line_cluster_index->indices.empty())
+		if (!line_cluster_index || line_cluster_index->indices.empty()){
 			continue;
-
+		}
         pcl::PointXYZ pt1, pt2;
         float line_length = 0.0f;
         // Point on the line
@@ -451,9 +434,11 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
         float min_proj =  std::numeric_limits<float>::infinity();
         float max_proj = -std::numeric_limits<float>::infinity();
 
-        for (auto idx : inliers->indices) {
-            const auto &p = in_cloud->points[idx];
-            Eigen::Vector3f point(p.x, p.y, p.z);
+        for (const auto &p : cloud_line->points) {
+	//for (auto idx : inliers->indices) {
+  	  //const auto &p = in_cloud->points[idx];  
+
+          Eigen::Vector3f point(p.x, p.y, p.z);
             float projection = direction.dot(point - point_on_line);
 
             if (projection < min_proj) {
@@ -480,7 +465,7 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
         
         // if (line_length == 0 || (min_length >= 0 && line_length < min_length)
        //                   || (max_length >= 0 && line_length > max_length)) {
-       if (line_length == 0 || (line_length < 0.6) || (line_length > 0.8)){
+       if (line_length == 0 || (line_length < 0.65 || line_length > 0.75)){
         continue;
                 }
 
@@ -543,8 +528,6 @@ void publishLineMarkers(const std::vector<laser_scan_integrator_msg::msg::LineSe
 
     // Publizieren des Markers
     marker_pub_->publish(marker);
-    RCLCPP_INFO(this->get_logger(), "Linienmarker %d veröffentlicht: (%.3f, %.3f) bis (%.3f, %.3f)", 
-                marker.id, p1.x, p1.y, p2.x, p2.y);
   }
 }
 
