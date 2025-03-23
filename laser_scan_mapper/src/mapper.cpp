@@ -46,7 +46,7 @@ public:
   {
     // YAML laden (über den Share-Pfad)
     std::string share_dir = ament_index_cpp::get_package_share_directory("laser_scan_mapper");
-    std::string yaml_file = share_dir + "mapper_params.yaml";
+    std::string yaml_file = share_dir + "/mapper_params.yaml";
     RCLCPP_INFO(this->get_logger(), "Lade Maschinenliste aus YAML: %s", yaml_file.c_str());
 
     if (!loadMachineNamesFromYaml(yaml_file, machine_names_)) {
@@ -79,7 +79,7 @@ public:
 
     // Subscriber für LineSegments
     sub_segments_ = this->create_subscription<laser_scan_integrator_msg::msg::LineSegments>(
-      "robotinobase2/line_segments",
+      "robotinobase4/line_segments",
       10,
       std::bind(&MapperNode::segmentsCallback, this, std::placeholders::_1));
 
@@ -90,8 +90,8 @@ private:
   // Maschinenbreite und Toleranzen (SI-Einheiten)
   // (Hinweis: Da y nun die Fahrtrichtung ist, entspricht machine_width_ der lateralen Ausdehnung entlang der x-Achse.)
   const double machine_width_      = 0.35;  // 35 cm
-  const double position_tolerance_ = 0.3;   // z. B. 30 cm
-  const double angle_tolerance_    = 0.4;     // z. B. 0.4 rad ~ 23°
+  const double position_tolerance_ = 0.5;   // z. B. 30 cm
+  const double angle_tolerance_    = 1;     // z. B. 0.4 rad ~ 23°
 
   // Für Maschinen-Rechteck:
   // (Angepasst: Die Länge (Fahrtrichtung) liegt nun entlang der y-Achse und die Breite entlang der x-Achse.)
@@ -244,144 +244,248 @@ private:
     return true;
   }
 
-  // Segment-Callback: Transformation und Berechnung im Map-Frame für segmentierte Linien
-  void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::SharedPtr msg)
-  {
-    RCLCPP_INFO(this->get_logger(), 
-                "Empfange LineSegments mit %zu Segment(en).", msg->segments.size());
+void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::SharedPtr msg)
+{
+  for (const auto &entry : machine_transforms_) {
+    const std::string &machine_frame_id = entry.first;
+    const auto &machine_transform = entry.second;
 
-    // Für jeden in machine_transforms_ enthaltenen Maschinen-Frame
-    for (const auto &entry : machine_transforms_) {
-      const std::string &machine_frame_id = entry.first;
-      const auto &machine_transform = entry.second;
+    for (size_t idx = 0; idx < msg->segments.size(); ++idx) {
+      const auto &segment = msg->segments[idx];
 
-      // Maschinenmittelpunkt und angepasste Orientierung (y ist nun Fahrtrichtung)
-      double mx = machine_transform.transform.translation.x;
-      double my = machine_transform.transform.translation.y;
-      // Umrechnung: Da bisher angenommen wurde, dass x vorwärts ist, wird hier um 90° (M_PI/2) korrigiert.
-      double machine_yaw = getYawFromQuaternion(machine_transform.transform.rotation)- M_PI/2.0;
+      // Transform segment endpoints into the map frame
+      geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_base, pt2_base, pt1_map, pt2_map;
+      pt1_in.header.stamp = this->now();
+      pt1_in.header.frame_id = "robotinobase4/laser_link";
+      pt1_in.point = segment.end_point1;
 
-      Eigen::Vector2d center(mx, my);
-      double half_width = machine_width_ * 0.5;
-      Eigen::Rotation2Dd R(machine_yaw);
+      pt2_in.header = pt1_in.header;
+      pt2_in.point = segment.end_point2;
 
-      // Erwartete Kanten im Map-Frame: 
-      // Statt entlang der lokalen y-Achse (bei x als Fahrtrichtung) erfolgt nun die Verschiebung
-      // entlang der lokalen x-Achse (da y Fahrtrichtung ist).
-      Eigen::Vector2d expected_edge1 = center + R * Eigen::Vector2d( half_width, 0);
-      Eigen::Vector2d expected_edge2 = center + R * Eigen::Vector2d(-half_width, 0);
-
-      for (size_t idx = 0; idx < msg->segments.size(); ++idx) {
-        const auto &segment = msg->segments[idx];
-
-        // Transformation der Segment-Endpunkte in den Map-Frame
-        geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_map, pt2_map;
-        pt1_in.header.stamp = this->now();
-        pt1_in.header.frame_id = "robotinobase2/laser_link";
-        pt1_in.point = segment.end_point1;
-
-        pt2_in.header = pt1_in.header;
-        pt2_in.point = segment.end_point2;
-
-        try {
-          pt1_map = tf_buffer_->transform(pt1_in, "map", tf2::durationFromSec(1.0));
-          pt2_map = tf_buffer_->transform(pt2_in, "map", tf2::durationFromSec(1.0));
-        } catch (const tf2::TransformException &ex) {
-          RCLCPP_WARN(this->get_logger(), 
-                      "Fehler beim Transformieren der Segmentpunkte: %s", ex.what());
-          continue;
-        }
-
-        // Mittelwert der beiden Endpunkte
-        Eigen::Vector2d measured(
-          0.5 * (pt1_map.point.x + pt2_map.point.x),
-          0.5 * (pt1_map.point.y + pt2_map.point.y)
-        );
-
-        // Abstände zu den erwarteten Kanten
-        double d1 = (measured - expected_edge1).norm();
-        double d2 = (measured - expected_edge2).norm();
-        double min_distance = std::min(d1, d2);
-
-        // Winkelabweichung: Auch hier erfolgt die Anpassung um 90° (M_PI/2)
-        double dtheta = (segment.bearing - M_PI/2.0) - machine_yaw;
-        while (dtheta > M_PI)  dtheta -= 2 * M_PI;
-        while (dtheta < -M_PI) dtheta += 2 * M_PI;
-
-        // Prüfung der Toleranzen
-        if (min_distance > position_tolerance_ || 
-            std::fabs(dtheta) > angle_tolerance_)
-        {
-          RCLCPP_INFO(this->get_logger(),
-                      "Segment [%zu] verworfen für %s: dist=%.3f, dtheta=%.3f",
-                      idx, machine_frame_id.c_str(), min_distance, dtheta);
-          continue;
-        }
-
-        // Neue Maschinenposition berechnen
-        Eigen::Vector2d chosen_edge = (d1 < d2) ? expected_edge1 : expected_edge2;
-        double new_yaw = segment.bearing - M_PI/2.0;
-
-        // Richte die Maschine neu aus
-        Eigen::Rotation2Dd R_new(new_yaw);
-        // Bestimme den seitlichen (linken) Vektor: Bei y als Fahrtrichtung entspricht links R_new * (-1, 0)
-        Eigen::Vector2d u = R_new * Eigen::Vector2d(-1, 0);
-        Eigen::Vector2d v = chosen_edge - center;
-        double dot = v.dot(u);
-        double offset_sign = (dot >= 0.0) ? 1.0 : -1.0;
-
-        Eigen::Vector2d new_center = measured - offset_sign * half_width * u;
-
-        // Korrigierter Transform
-        geometry_msgs::msg::TransformStamped corrected_transform = machine_transform;
-        corrected_transform.transform.translation.x = new_center.x();
-        corrected_transform.transform.translation.y = new_center.y();
-
-        tf2::Quaternion corrected_q;
-        corrected_q.setRPY(0, 0, new_yaw);
-        corrected_transform.transform.rotation = tf2::toMsg(corrected_q);
-        corrected_transform.child_frame_id = machine_frame_id + "-CORRECTED";
-        corrected_transform.header.stamp = this->now();
-
-        // Publiziere neuen Transform
-        tf_broadcaster_->sendTransform(corrected_transform);
-
-        RCLCPP_INFO(this->get_logger(),
-                    "Korrigierter TF für %s (Segment[%zu]) veröffentlicht: "
-                    "x=%.3f, y=%.3f, yaw=%.3f",
-                    machine_frame_id.c_str(), idx,
-                    corrected_transform.transform.translation.x,
-                    corrected_transform.transform.translation.y,
-                    new_yaw);
-
-        // Erstelle Marker für dieses Segment
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = this->now();
-        marker.ns = "mapped_segments";
-        marker.id = global_marker_id++;  // hochzählen, damit kein Überschreiben
-        marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-
-        // Linienbreite
-        marker.scale.x = 0.02;
-
-        // Farbe: Rot
-        marker.color.r = 1.0f;
-        marker.color.g = 0.0f;
-        marker.color.b = 0.0f;
-        marker.color.a = 1.0f;
-
-        // Marker soll unbegrenzt angezeigt werden
-        marker.lifetime = rclcpp::Duration(0, 0);
-
-        marker.points.push_back(pt1_map.point);
-        marker.points.push_back(pt2_map.point);
-
-        marker_pub_->publish(marker);
+      try {
+        pt1_base = tf_buffer_->transform(pt1_in, "robotinobase4/base_link", tf2::durationFromSec(1.0));
+        pt2_base = tf_buffer_->transform(pt2_in, "robotinobase4/base_link", tf2::durationFromSec(1.0));
+      } catch (const tf2::TransformException &ex) {
+        // Transformation of segment endpoints failed, skip this segment
+        continue;
       }
+
+      // Calculate segment midpoint in base coordinates
+      Eigen::Vector2d segment_origin(
+        0.5 * (pt2_base.point.x + pt1_base.point.x),
+        0.5 * (pt2_base.point.y + pt1_base.point.y)
+      );
+
+      // Compute direction vector of the line in base coordinates
+      Eigen::Vector3d z(0.0, 0.0, 1.0);
+      Eigen::Vector3d segment_direction_3d = Eigen::Vector3d(
+        pt2_base.point.x - pt1_base.point.x,
+        pt2_base.point.y - pt1_base.point.y,
+        0.0
+      );
+      // Cross product with z gives a vector in the XY plane orthogonal to segment_direction_3d
+      Eigen::Vector3d segment_origin_y_3d = z.cross(segment_direction_3d);
+      Eigen::Vector2d segment_origin_y = segment_origin_y_3d.head<2>();
+
+      // Calculate the shifted segment center (e.g. to the side by machine_width_/2)
+      Eigen::Vector2d segment_center = (machine_width_ / 2) * segment_origin_y.normalized() + segment_origin;
+
+      // Create segment center point in base coordinates
+      geometry_msgs::msg::PointStamped segment_base;
+      segment_base.header.stamp = pt2_base.header.stamp;
+      segment_base.header.frame_id = "robotinobase4/base_link";
+      segment_base.point.x = segment_center.x();
+      segment_base.point.y = segment_center.y();
+
+      // Transform all relevant points into the map frame
+      geometry_msgs::msg::PointStamped segment_map;
+      try {
+        segment_map = tf_buffer_->transform(segment_base, "map", tf2::durationFromSec(1.0));
+        pt1_map = tf_buffer_->transform(pt1_base, "map", tf2::durationFromSec(1.0));
+        pt2_map = tf_buffer_->transform(pt2_base, "map", tf2::durationFromSec(1.0));
+        RCLCPP_INFO(this->get_logger(), "pt1_map(1): x=%.3f, y=%.3f", pt1_map.point.x, pt1_map.point.y);
+        RCLCPP_INFO(this->get_logger(), "pt2_map(1): x=%.3f, y=%.3f", pt2_map.point.x, pt2_map.point.y);
+      } catch (const tf2::TransformException &ex) {
+        // Transformation of segment center failed, skip this segment
+        continue;
+      }
+
+      // Calculate segment midpoint in map frame and direction vector
+      Eigen::Vector2d segment_origin_map(
+        0.5 * (pt2_map.point.x + pt1_map.point.x),
+        0.5 * (pt2_map.point.y + pt1_map.point.y)
+      );
+      Eigen::Vector2d line(pt2_map.point.x - pt1_map.point.x, pt2_map.point.y - pt1_map.point.y);
+      Eigen::Vector3d line_cross_3d = z.cross(Eigen::Vector3d(line.x(), line.y(), 0.0));
+      Eigen::Vector2d line_cross = line_cross_3d.head<2>();
+      double line_angle = std::atan2(line_cross.y(), line_cross.x());
+
+      // Create the segment transform in map frame
+      geometry_msgs::msg::TransformStamped segment_transform;
+      segment_transform.header.frame_id = "map";
+      segment_transform.child_frame_id = "segment_frame";  // freely chosen
+      segment_transform.header.stamp = this->now();
+      segment_transform.transform.translation.x = segment_origin_map.x();
+      segment_transform.transform.translation.y = segment_origin_map.y();
+      segment_transform.transform.translation.z = 0.0;
+
+      tf2::Quaternion q;
+      q.setRPY(0, 0, line_angle);
+      segment_transform.transform.rotation = tf2::toMsg(q);
+
+      RCLCPP_INFO(this->get_logger(), "line: x=%.3f, y=%.3f", line.x(), line.y());
+
+      // Convert both transforms to tf2::Transform
+      tf2::Transform tf_machine(
+        tf2::Quaternion(
+          machine_transform.transform.rotation.x,
+          machine_transform.transform.rotation.y,
+          machine_transform.transform.rotation.z,
+          machine_transform.transform.rotation.w),
+        tf2::Vector3(
+          machine_transform.transform.translation.x,
+          machine_transform.transform.translation.y,
+          machine_transform.transform.translation.z)
+      );
+
+      tf2::Transform tf_segment(
+        tf2::Quaternion(
+          segment_transform.transform.rotation.x,
+          segment_transform.transform.rotation.y,
+          segment_transform.transform.rotation.z,
+          segment_transform.transform.rotation.w),
+        tf2::Vector3(
+          segment_transform.transform.translation.x,
+          segment_transform.transform.translation.y,
+          segment_transform.transform.translation.z)
+      );
+
+      // Compute the difference transform (segment relative to machine)
+      tf2::Transform tf_diff = tf_machine.inverseTimes(tf_segment);
+
+      // Compute distance
+      double dx = tf_diff.getOrigin().x();
+      double dy = tf_diff.getOrigin().y();
+      double dz = tf_diff.getOrigin().z();
+      double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+      // Compute yaw difference
+      double roll, pitch, yaw;
+      tf2::Matrix3x3(tf_diff.getRotation()).getRPY(roll, pitch, yaw);
+
+      // Adjust yaw if it's approximately ±180°
+      double adjusted_yaw = yaw;
+      if (std::abs(std::abs(yaw) - M_PI) < angle_tolerance_) {
+        adjusted_yaw = (yaw > 0) ? yaw - M_PI : yaw + M_PI;
+      }
+
+      // RCLCPP_INFO(this->get_logger(),
+      //             "Yaw Machine: %.3f, Yaw Line: %.3f, Yaw Diff: %.3f",
+      //             machine_yaw, line_angle, adjusted_yaw);
+
+      // Reject segment if distance or angle exceed tolerances
+      if (std::abs(distance) > position_tolerance_ || std::abs(adjusted_yaw) > angle_tolerance_) {
+        RCLCPP_INFO(this->get_logger(),
+                    "Segment [%zu] rejected for %s: dist=%.3f, dtheta=%.3f \n --- \n",
+                    idx, machine_frame_id.c_str(), distance, adjusted_yaw);
+        continue;
+      }
+
+      RCLCPP_INFO(this->get_logger(), "center_segment(2): x=%.3f, y=%.3f",
+                  segment_origin_map.x(), segment_origin_map.y());
+
+      // Create corrected transform based on machine transform
+      geometry_msgs::msg::TransformStamped corrected_transform = machine_transform;
+      corrected_transform.transform.translation.x = segment_origin_map.x();
+      corrected_transform.transform.translation.y = segment_origin_map.y();
+      tf2::Quaternion corrected_q;
+      corrected_q.setRPY(0, 0, line_angle +
+                                ((std::abs(std::abs(yaw) - M_PI) < angle_tolerance_) ? M_PI : 0));
+      corrected_transform.transform.rotation = tf2::toMsg(corrected_q);
+      corrected_transform.child_frame_id = machine_frame_id + "-CORRECTED";
+      corrected_transform.header.stamp = this->now();
+      RCLCPP_INFO(this->get_logger(),
+                  "Corrected TF for %s (Segment[%zu]) published: x=%.3f, y=%.3f, yaw=%.3f \n --- \n",
+                  machine_frame_id.c_str(), idx,
+                  corrected_transform.transform.translation.x,
+                  corrected_transform.transform.translation.y,
+                  line_angle);
+
+      // Publish the corrected transform
+      tf_broadcaster_->sendTransform(corrected_transform);
+
+      // --- Publish additional transforms along the x-axis of the corrected transform ---
+
+      // Convert corrected_transform (geometry_msgs) to tf2::Transform
+      tf2::Transform tf_corrected;
+      tf2::fromMsg(corrected_transform.transform, tf_corrected);
+
+      // Create offset transform for "INPUTPUT-CORRECTED":
+      // 50 cm along positive x and 180° rotation around z.
+      tf2::Transform tf_offset_input;
+      {
+        tf2::Quaternion q_offset_input;
+        q_offset_input.setRPY(0, 0, M_PI);  // 180° rotation around z
+        tf_offset_input.setRotation(q_offset_input);
+        tf_offset_input.setOrigin(tf2::Vector3(0.5, 0.0, 0.0)); // +0.5 m along x
+      }
+
+      // Create offset transform for "OUTPUT-CORRECTED":
+      // 50 cm along negative x with no additional rotation.
+      tf2::Transform tf_offset_output;
+      {
+        tf2::Quaternion q_offset_output;
+        q_offset_output.setRPY(0, 0, 0);  // no rotation
+        tf_offset_output.setRotation(q_offset_output);
+        tf_offset_output.setOrigin(tf2::Vector3(-0.5, 0.0, 0.0)); // -0.5 m along x
+      }
+
+      // Compute the new transforms relative to the corrected transform
+      tf2::Transform tf_input = tf_corrected * tf_offset_input;
+      tf2::Transform tf_output = tf_corrected * tf_offset_output;
+
+      // Create and publish the new geometry_msgs::msg::TransformStamped messages
+
+      // For "INPUTPUT-CORRECTED"
+      geometry_msgs::msg::TransformStamped input_transform = corrected_transform;
+      input_transform.child_frame_id = machine_frame_id + "-INPUTPUT-CORRECTED";
+      input_transform.transform = tf2::toMsg(tf_input);
+      input_transform.header.stamp = this->now();
+      tf_broadcaster_->sendTransform(input_transform);
+
+      // For "OUTPUT-CORRECTED"
+      geometry_msgs::msg::TransformStamped output_transform = corrected_transform;
+      output_transform.child_frame_id = machine_frame_id + "-OUTPUT-CORRECTED";
+      output_transform.transform = tf2::toMsg(tf_output);
+      output_transform.header.stamp = this->now();
+      tf_broadcaster_->sendTransform(output_transform);
+
+      // Create a marker for visualization
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = this->now();
+      marker.ns = "mapped_segments";
+      marker.id = global_marker_id++;  // Unique ID per marker
+      marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.scale.x = 0.02;  // Line width
+
+      // Marker color: red
+      marker.color.r = 1.0f;
+      marker.color.g = 0.0f;
+      marker.color.b = 0.0f;
+      marker.color.a = 1.0f;
+
+      // Marker persists indefinitely
+      marker.lifetime = rclcpp::Duration(0, 0);
+
+      marker.points.push_back(pt1_map.point);
+      marker.points.push_back(pt2_map.point);
+
+      marker_pub_->publish(marker);
     }
   }
+}
 
   // Hilfsfunktion: Yaw aus Quaternion
   double getYawFromQuaternion(const geometry_msgs::msg::Quaternion &q) const
@@ -392,6 +496,37 @@ private:
     m.getRPY(roll, pitch, yaw);
     return yaw;
   }
+double adjustYaw(double cYaw, double mYaw) {
+    // Beides normalisieren
+    cYaw = normalizeAngle(cYaw);
+    mYaw = normalizeAngle(mYaw);
+
+    // Differenz in [-pi, pi)
+    double diff = normalizeAngle(cYaw - mYaw);
+
+    // Falls |diff| > 90°, drehe cYaw um 180° (π), damit er in "dieselbe Richtung" wie mYaw schaut
+    if (std::fabs(diff) > M_PI / 2.0) {
+        // Drehe cYaw um ±π und normalisiere erneut.
+        // Vorzeichenwahl kannst du optional vom diff abhängig machen
+        cYaw = normalizeAngle(cYaw + (diff > 0.0 ? -M_PI : M_PI));
+    }
+
+    return cYaw;
+}
+
+inline double normalizeAngle(double angle) {
+    // Erst in [0, 2*pi) bringen
+    angle = fmod(angle, 2.0 * M_PI);
+    if (angle < 0.0) {
+        angle += 2.0 * M_PI;
+    }
+    // Falls jetzt größer/gleich pi, in [-pi, pi) verschieben
+    if (angle >= M_PI) {
+        angle -= 2.0 * M_PI;
+    }
+    return angle;
+}
+
 };
 
 // **Definition** der statischen Variable außerhalb der Klasse

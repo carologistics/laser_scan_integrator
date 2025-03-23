@@ -6,8 +6,9 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1/Tree1
+        - /TF1/Frames1
         - /Marker1/Topic1
+        - /Marker2
         - /Marker2/Topic1
       Splitter Ratio: 0.7823529243469238
     Tree Height: 707
@@ -57,293 +58,13 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        C-BS:
-          Value: true
-        C-BS-INPUT:
-          Value: false
-        C-BS-OUTPUT:
-          Value: false
-        C-CS1:
-          Value: true
-        C-CS1-INPUT:
-          Value: false
-        C-CS1-OUTPUT:
-          Value: false
-        C-DS:
-          Value: true
-        C-DS-INPUT:
-          Value: false
-        C-DS-OUTPUT:
-          Value: false
-        C-RS1:
-          Value: false
-        C-RS1-INPUT:
-          Value: false
-        C-RS1-OUTPUT:
-          Value: false
-        C-RS2:
-          Value: true
-        C-RS2-CORRECTED:
-          Value: true
-        C-RS2-INPUT:
-          Value: false
-        C-RS2-OUTPUT:
-          Value: false
-        M-BS:
-          Value: true
-        M-BS-CORRECTED:
-          Value: true
-        M-BS-INPUT:
-          Value: false
-        M-BS-OUTPUT:
-          Value: false
-        M-CS1:
-          Value: false
-        M-CS1-INPUT:
-          Value: false
-        M-CS1-OUTPUT:
-          Value: false
-        M-DS:
-          Value: false
-        M-DS-INPUT:
-          Value: false
-        M-DS-OUTPUT:
-          Value: false
-        M-RS1:
-          Value: true
-        M-RS1-CORRECTED:
-          Value: true
-        M-RS1-INPUT:
-          Value: false
-        M-RS1-OUTPUT:
-          Value: false
-        M-RS2:
-          Value: true
-        M-RS2-INPUT:
-          Value: false
-        M-RS2-OUTPUT:
-          Value: false
-        WAIT-C-BS-INPUT:
-          Value: false
-        WAIT-C-BS-OUTPUT:
-          Value: false
-        WAIT-C-CS1-INPUT:
-          Value: false
-        WAIT-C-CS1-OUTPUT:
-          Value: false
-        WAIT-C-DS-INPUT:
-          Value: false
-        WAIT-C-DS-OUTPUT:
-          Value: false
-        WAIT-C-RS1-INPUT:
-          Value: false
-        WAIT-C-RS1-OUTPUT:
-          Value: false
-        WAIT-C-RS2-INPUT:
-          Value: false
-        WAIT-C-RS2-OUTPUT:
-          Value: false
-        WAIT-M-BS-INPUT:
-          Value: false
-        WAIT-M-BS-OUTPUT:
-          Value: false
-        WAIT-M-CS1-INPUT:
-          Value: false
-        WAIT-M-CS1-OUTPUT:
-          Value: false
-        WAIT-M-DS-INPUT:
-          Value: false
-        WAIT-M-DS-OUTPUT:
-          Value: false
-        WAIT-M-RS1-INPUT:
-          Value: false
-        WAIT-M-RS1-OUTPUT:
-          Value: false
-        WAIT-M-RS2-INPUT:
-          Value: false
-        WAIT-M-RS2-OUTPUT:
-          Value: false
-        WAIT1:
-          Value: false
-        WAIT2:
-          Value: false
-        WAIT3:
-          Value: false
-        WAIT4:
-          Value: false
-        map:
-          Value: false
-        robotinobase2/anglebracketusb_link:
-          Value: false
-        robotinobase2/back_laser_link:
-          Value: false
-        robotinobase2/base_link:
-          Value: true
-        robotinobase2/command_bridge_link:
-          Value: false
-        robotinobase2/front_laser_link:
-          Value: false
-        robotinobase2/imu_link:
-          Value: false
-        robotinobase2/irpcl_link:
-          Value: false
-        robotinobase2/irscan_link:
-          Value: false
-        robotinobase2/laser_link:
-          Value: false
-        robotinobase2/odom:
-          Value: false
-        robotinobase2/wheel0_link:
-          Value: false
-        robotinobase2/wheel1_link:
-          Value: false
-        robotinobase2/wheel2_link:
-          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        map:
-          C-BS:
-            {}
-          C-BS-INPUT:
-            {}
-          C-BS-OUTPUT:
-            {}
-          C-CS1:
-            {}
-          C-CS1-INPUT:
-            {}
-          C-CS1-OUTPUT:
-            {}
-          C-DS:
-            {}
-          C-DS-INPUT:
-            {}
-          C-DS-OUTPUT:
-            {}
-          C-RS1:
-            {}
-          C-RS1-INPUT:
-            {}
-          C-RS1-OUTPUT:
-            {}
-          C-RS2:
-            {}
-          C-RS2-CORRECTED:
-            {}
-          C-RS2-INPUT:
-            {}
-          C-RS2-OUTPUT:
-            {}
-          M-BS:
-            {}
-          M-BS-CORRECTED:
-            {}
-          M-BS-INPUT:
-            {}
-          M-BS-OUTPUT:
-            {}
-          M-CS1:
-            {}
-          M-CS1-INPUT:
-            {}
-          M-CS1-OUTPUT:
-            {}
-          M-DS:
-            {}
-          M-DS-INPUT:
-            {}
-          M-DS-OUTPUT:
-            {}
-          M-RS1:
-            {}
-          M-RS1-CORRECTED:
-            {}
-          M-RS1-INPUT:
-            {}
-          M-RS1-OUTPUT:
-            {}
-          M-RS2:
-            {}
-          M-RS2-INPUT:
-            {}
-          M-RS2-OUTPUT:
-            {}
-          WAIT-C-BS-INPUT:
-            {}
-          WAIT-C-BS-OUTPUT:
-            {}
-          WAIT-C-CS1-INPUT:
-            {}
-          WAIT-C-CS1-OUTPUT:
-            {}
-          WAIT-C-DS-INPUT:
-            {}
-          WAIT-C-DS-OUTPUT:
-            {}
-          WAIT-C-RS1-INPUT:
-            {}
-          WAIT-C-RS1-OUTPUT:
-            {}
-          WAIT-C-RS2-INPUT:
-            {}
-          WAIT-C-RS2-OUTPUT:
-            {}
-          WAIT-M-BS-INPUT:
-            {}
-          WAIT-M-BS-OUTPUT:
-            {}
-          WAIT-M-CS1-INPUT:
-            {}
-          WAIT-M-CS1-OUTPUT:
-            {}
-          WAIT-M-DS-INPUT:
-            {}
-          WAIT-M-DS-OUTPUT:
-            {}
-          WAIT-M-RS1-INPUT:
-            {}
-          WAIT-M-RS1-OUTPUT:
-            {}
-          WAIT-M-RS2-INPUT:
-            {}
-          WAIT-M-RS2-OUTPUT:
-            {}
-          WAIT1:
-            {}
-          WAIT2:
-            {}
-          WAIT3:
-            {}
-          WAIT4:
-            {}
-          robotinobase2/odom:
-            robotinobase2/base_link:
-              robotinobase2/anglebracketusb_link:
-                {}
-              robotinobase2/back_laser_link:
-                {}
-              robotinobase2/command_bridge_link:
-                {}
-              robotinobase2/front_laser_link:
-                {}
-              robotinobase2/imu_link:
-                {}
-              robotinobase2/irpcl_link:
-                {}
-              robotinobase2/irscan_link:
-                {}
-              robotinobase2/laser_link:
-                {}
-              robotinobase2/wheel0_link:
-                {}
-              robotinobase2/wheel1_link:
-                {}
-              robotinobase2/wheel2_link:
-                {}
+        {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Marker
@@ -357,10 +78,10 @@ Visualization Manager:
         Filter size: 23
         History Policy: Keep All
         Reliability Policy: Best Effort
-        Value: /mapped_segments
+        Value: /machine_markers
       Value: false
     - Class: rviz_default_plugins/Marker
-      Enabled: false
+      Enabled: true
       Name: Marker
       Namespaces:
         {}
@@ -370,8 +91,8 @@ Visualization Manager:
         Filter size: 20
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /machine_markers
-      Value: false
+        Value: /robotinobase4/line_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -418,7 +139,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 13.76181411743164
+      Distance: 15.017695426940918
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -433,10 +154,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5803988575935364
+      Pitch: 0.37539929151535034
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.46039462089538574
+      Yaw: 3.1053965091705322
     Saved: ~
 Window Geometry:
   Displays:
@@ -444,7 +165,7 @@ Window Geometry:
   Height: 1011
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001be00000351fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003f00000351000000cc00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003f00000351000000a900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073e0000003efc0100000002fb0000000800540069006d006501000000000000073e0000026f00fffffffb0000000800540069006d006501000000000000045000000000000000000000057a0000035100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015600000351fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003f00000351000000cc00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003f00000351000000a900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073e0000003efc0100000002fb0000000800540069006d006501000000000000073e0000026f00fffffffb0000000800540069006d00650100000000000004500000000000000000000005e20000035100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
