@@ -66,16 +66,10 @@ public:
     // Marker-Publisher für Maschinen-Rechtecke (Topic: /machine_markers)
     machine_marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("machine_markers", 10);
 
-    // Warten auf TF-Daten
-    RCLCPP_INFO(this->get_logger(), "Warte auf TF-Daten...");
-    std::this_thread::sleep_for(3s);
+    // Erstelle Timer um statische TF zu finden
+    transform_timer_ = this->create_wall_timer(1s, std::bind(&MapperNode::updateMachineTransforms, this));
 
-    // Maschinen-Transforms laden (im Map-Frame) und Marker sofort publizieren
-    if (!initializeMachineTransforms()) {
-      RCLCPP_ERROR(this->get_logger(), "Maschinen-Frames konnten nicht initialisiert werden.");
-      rclcpp::shutdown();
-      return;
-    }
+
 
     // Subscriber für LineSegments
     sub_segments_ = this->create_subscription<laser_scan_integrator_msg::msg::LineSegments>(
@@ -90,8 +84,8 @@ private:
   // Maschinenbreite und Toleranzen (SI-Einheiten)
   // (Hinweis: Da y nun die Fahrtrichtung ist, entspricht machine_width_ der lateralen Ausdehnung entlang der x-Achse.)
   const double machine_width_      = 0.35;  // 35 cm
-  const double position_tolerance_ = 0.5;   // z. B. 30 cm
-  const double angle_tolerance_    = 1;     // z. B. 0.4 rad ~ 23°
+  const double position_tolerance_ = 0.3;   // z. B. 30 cm
+  const double angle_tolerance_    = 0.5;     // z. B. 0.4 rad ~ 23°
 
   // Für Maschinen-Rechteck:
   // (Angepasst: Die Länge (Fahrtrichtung) liegt nun entlang der y-Achse und die Breite entlang der x-Achse.)
@@ -99,6 +93,9 @@ private:
   const double machine_height_ = 0.35;  // z. B. 70 cm (seitliche Ausdehnung, x-Achse)
   // Zähler für die Segmentmarker (Deklaration ohne Initialisierung!)
   static int global_marker_id;
+
+  //TImer for ma
+  rclcpp::TimerBase::SharedPtr transform_timer_;
 
   // Gelesene Maschinen-Namen aus YAML
   std::vector<std::string> machine_names_;
@@ -190,59 +187,34 @@ private:
                 transform_stamped.transform.translation.y);
   }
 
-  // Maschinen-Transforms laden (im Map-Frame) und Marker sofort publizieren
-  bool initializeMachineTransforms()
-  {
-    if (machine_names_.empty()) {
-      RCLCPP_ERROR(this->get_logger(), "Keine Maschinen-Namen vorhanden. Bitte YAML prüfen!");
-      return false;
+// Maschinen-Transforms laden (im Map-Frame) und Marker sofort publizieren
+void updateMachineTransforms(){
+  bool all_loaded = true;
+  for (const auto &machine_frame_id : machine_names_) {
+    // Überspringe Maschinen, deren Transform bereits geladen wurde
+    if (machine_transforms_.find(machine_frame_id) != machine_transforms_.end()) {
+      continue;
     }
-
-    for (const auto &machine_frame_id : machine_names_) {
-      bool transform_success = false;
-      for (int attempt = 1; attempt <= 10; ++attempt) {
-        try {
-          RCLCPP_INFO(this->get_logger(), 
-                      "Versuch %d/10: Lade Transform für %s ...", 
-                      attempt, machine_frame_id.c_str());
-
-          auto transform_stamped =
-            tf_buffer_->lookupTransform("map", machine_frame_id, tf2::TimePointZero);
-          machine_transforms_[machine_frame_id] = transform_stamped;
-
-          RCLCPP_INFO(this->get_logger(),
-                      "Transform für %s geladen: (%.3f, %.3f)",
-                      machine_frame_id.c_str(),
-                      transform_stamped.transform.translation.x,
-                      transform_stamped.transform.translation.y);
-
-          transform_success = true;
-
-          // Marker sofort veröffentlichen
-          publishSingleMachineMarker(machine_frame_id, transform_stamped);
-          break;
-        }
-        catch (const tf2::TransformException &ex) {
-          RCLCPP_WARN(this->get_logger(),
-                      "Transform für %s fehlgeschlagen (Versuch %d): %s",
-                      machine_frame_id.c_str(), attempt, ex.what());
-          if (attempt == 10) {
-            RCLCPP_ERROR(this->get_logger(),
-                         "Transform für %s konnte nach 10 Versuchen nicht geladen werden.",
-                         machine_frame_id.c_str());
-            return false;
-          }
-          std::this_thread::sleep_for(1s);
-        }
-      }
-      if (!transform_success) {
-        return false;
-      }
+    try {
+      RCLCPP_INFO(this->get_logger(), "Versuche Transform für %s zu laden...", machine_frame_id.c_str());
+      auto transform_stamped = tf_buffer_->lookupTransform("map", machine_frame_id, tf2::TimePointZero);
+      machine_transforms_[machine_frame_id] = transform_stamped;
+      publishSingleMachineMarker(machine_frame_id, transform_stamped);
+      RCLCPP_INFO(this->get_logger(), "Transform für %s erfolgreich geladen.", machine_frame_id.c_str());
     }
-
-    RCLCPP_INFO(this->get_logger(), "Alle Maschinen-Frames erfolgreich geladen.");
-    return true;
+    catch (const tf2::TransformException &ex) {
+      RCLCPP_WARN(this->get_logger(), "Transform für %s noch nicht verfügbar: %s", machine_frame_id.c_str(), ex.what());
+      all_loaded = false;
+    }
   }
+  
+  if (all_loaded) {
+    RCLCPP_INFO(this->get_logger(), "Alle Maschinen-Transforms sind jetzt verfügbar.");
+    // Timer stoppen, da alle Transforms geladen sind.
+    transform_timer_->cancel();
+  }
+}
+
 
 void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::SharedPtr msg)
 {
