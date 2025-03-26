@@ -49,6 +49,9 @@ public:
     std::string yaml_file = share_dir + "/mapper_params.yaml";
     RCLCPP_INFO(this->get_logger(), "Lade Maschinenliste aus YAML: %s", yaml_file.c_str());
 
+    initialize_params();
+    refresh_params();
+
     if (!loadMachineNamesFromYaml(yaml_file, machine_names_)) {
       RCLCPP_ERROR(this->get_logger(),
                    "Konnte Maschine-Namen aus %s nicht laden. Node wird beendet.",
@@ -81,6 +84,8 @@ public:
   }
 
 private:
+  std::string frameID_;
+  std::string laser_link_frame_;
   // Maschinenbreite und Toleranzen (SI-Einheiten)
   // (Hinweis: Da y nun die Fahrtrichtung ist, entspricht machine_width_ der lateralen Ausdehnung entlang der x-Achse.)
   const double machine_width_      = 0.35;  // 35 cm
@@ -228,7 +233,7 @@ void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::Shared
       // Transform segment endpoints into the map frame
       geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_base, pt2_base, pt1_map, pt2_map;
       pt1_in.header.stamp = this->now();
-      pt1_in.header.frame_id = "robotinobase4/laser_link";
+      pt1_in.header.frame_id = laser_link_frame_;
       pt1_in.point = segment.end_point1;
 
       pt2_in.header = pt1_in.header;
@@ -265,7 +270,7 @@ void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::Shared
       // Create segment center point in base coordinates
       geometry_msgs::msg::PointStamped segment_base;
       segment_base.header.stamp = pt2_base.header.stamp;
-      segment_base.header.frame_id = "robotinobase4/base_link";
+      segment_base.header.frame_id = laser_link_frame_;
       segment_base.point.x = segment_center.x();
       segment_base.point.y = segment_center.y();
 
@@ -374,7 +379,7 @@ void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::Shared
       corrected_q.setRPY(0, 0, line_angle +
                                 ((std::abs(std::abs(yaw) - M_PI) < angle_tolerance_) ? M_PI : 0));
       corrected_transform.transform.rotation = tf2::toMsg(corrected_q);
-      corrected_transform.child_frame_id = machine_frame_id + "-CORRECTED";
+      corrected_transform.child_frame_id = frameID_ + "/" + machine_frame_id + "-CORRECTED";
       corrected_transform.header.stamp = this->now();
       RCLCPP_INFO(this->get_logger(),
                   "Corrected TF for %s (Segment[%zu]) published: x=%.3f, y=%.3f, yaw=%.3f \n --- \n",
@@ -420,14 +425,14 @@ void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::Shared
 
       // For "INPUTPUT-CORRECTED"
       geometry_msgs::msg::TransformStamped input_transform = corrected_transform;
-      input_transform.child_frame_id = machine_frame_id + "-INPUTPUT-CORRECTED";
+      input_transform.child_frame_id =  frameID_ + "/" + machine_frame_id + "-INPUTPUT-CORRECTED";
       input_transform.transform = tf2::toMsg(tf_input);
       input_transform.header.stamp = this->now();
       tf_broadcaster_->sendTransform(input_transform);
 
       // For "OUTPUT-CORRECTED"
       geometry_msgs::msg::TransformStamped output_transform = corrected_transform;
-      output_transform.child_frame_id = machine_frame_id + "-OUTPUT-CORRECTED";
+      output_transform.child_frame_id =  frameID_ + "/" + machine_frame_id + "-OUTPUT-CORRECTED";
       output_transform.transform = tf2::toMsg(tf_output);
       output_transform.header.stamp = this->now();
       tf_broadcaster_->sendTransform(output_transform);
@@ -468,40 +473,20 @@ void segmentsCallback(const laser_scan_integrator_msg::msg::LineSegments::Shared
     m.getRPY(roll, pitch, yaw);
     return yaw;
   }
-double adjustYaw(double cYaw, double mYaw) {
-    // Beides normalisieren
-    cYaw = normalizeAngle(cYaw);
-    mYaw = normalizeAngle(mYaw);
 
-    // Differenz in [-pi, pi)
-    double diff = normalizeAngle(cYaw - mYaw);
 
-    // Falls |diff| > 90°, drehe cYaw um 180° (π), damit er in "dieselbe Richtung" wie mYaw schaut
-    if (std::fabs(diff) > M_PI / 2.0) {
-        // Drehe cYaw um ±π und normalisiere erneut.
-        // Vorzeichenwahl kannst du optional vom diff abhängig machen
-        cYaw = normalizeAngle(cYaw + (diff > 0.0 ? -M_PI : M_PI));
-    }
-
-    return cYaw;
+void initialize_params() {
+    this->declare_parameter<std::string>("frameID");
 }
 
-inline double normalizeAngle(double angle) {
-    // Erst in [0, 2*pi) bringen
-    angle = fmod(angle, 2.0 * M_PI);
-    if (angle < 0.0) {
-        angle += 2.0 * M_PI;
-    }
-    // Falls jetzt größer/gleich pi, in [-pi, pi) verschieben
-    if (angle >= M_PI) {
-        angle -= 2.0 * M_PI;
-    }
-    return angle;
+void refresh_params() {
+    this->get_parameter_or<std::string>("frameID", frameID_);
+    laser_link_frame_ = frameID_ + "/laser_link";
 }
 
 };
 
-// **Definition** der statischen Variable außerhalb der Klasse
+
 int MapperNode::global_marker_id = 0;
 
 int main(int argc, char **argv)
