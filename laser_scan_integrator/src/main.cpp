@@ -1,3 +1,17 @@
+// Copyright (c) 2025 Carologistics
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //
 //   created by: Michael Jonathan (mich1342)
 //   github.com/mich1342
@@ -14,17 +28,17 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_ros/create_timer_ros.h>
 
-#include "laser_scan_integrator_msg/srv/toggle_segmentation.hpp"
 #include "laser_scan_integrator_msg/msg/line_segment.hpp"
 #include "laser_scan_integrator_msg/msg/line_segments.hpp"
+#include "laser_scan_integrator_msg/srv/toggle_segmentation.hpp"
 
-//#include <pcl/point_cloud.h>
-//#include <pcl/point_types.h>
+// #include <pcl/point_cloud.h>
+// #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
-//#include <pcl/segmentation/sac_segmentation.h>
+// #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
-//#include <pcl/filters/extract_indices.h>
-//#include <pcl/search/kdtree.h>
+// #include <pcl/filters/extract_indices.h>
+// #include <pcl/search/kdtree.h>
 
 #include <pcl/common/centroid.h>
 #include <pcl/common/distances.h>
@@ -49,10 +63,9 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
-#include <random>
-
 
 struct LaserPoint {
   float direction_;
@@ -64,7 +77,6 @@ struct LaserPointLess {
     return a.direction_ < b.direction_;
   }
 };
-
 
 class scanMerger : public rclcpp::Node {
 public:
@@ -92,24 +104,29 @@ public:
     tf2_->setCreateTimerInterface(timer_interface);
     tf2_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf2_);
 
-    line_segments_pub_ = this->create_publisher<laser_scan_integrator_msg::msg::LineSegments>(
-        "line_segments", rclcpp::SystemDefaultsQoS());
+    line_segments_pub_ =
+        this->create_publisher<laser_scan_integrator_msg::msg::LineSegments>(
+            "line_segments", rclcpp::SystemDefaultsQoS());
 
-    segmentation_enabled_ = false; 
+    segmentation_enabled_ = false;
 
-    segmentation_service_ = this->create_service<laser_scan_integrator_msg::srv::ToggleSegmentation>(
+    segmentation_service_ = this->create_service<
+        laser_scan_integrator_msg::srv::ToggleSegmentation>(
         "toggle_segmentation",
-        std::bind(&scanMerger::handle_toggle_segmentation, this, std::placeholders::_1, std::placeholders::_2));
-    marker_pub_ = this ->create_publisher<visualization_msgs::msg::Marker>("line_markers",10);
-    pub_pointcloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("pointcloud_out", 10);
-
+        std::bind(&scanMerger::handle_toggle_segmentation, this,
+                  std::placeholders::_1, std::placeholders::_2));
+    marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
+        "line_markers", 10);
+    pub_pointcloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "pointcloud_out", 10);
   }
 
 private:
-
-  bool segmentation_enabled_ = true; 
-  rclcpp::Publisher<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr line_segments_pub_;
-  rclcpp::Service<laser_scan_integrator_msg::srv::ToggleSegmentation>::SharedPtr segmentation_service_;
+  bool segmentation_enabled_ = true;
+  rclcpp::Publisher<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr
+      line_segments_pub_;
+  rclcpp::Service<laser_scan_integrator_msg::srv::ToggleSegmentation>::SharedPtr
+      segmentation_service_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_pointcloud_;
 
@@ -124,334 +141,135 @@ private:
   }
 
   void handle_toggle_segmentation(
-    const std::shared_ptr<laser_scan_integrator_msg::srv::ToggleSegmentation::Request> request,
-    std::shared_ptr<laser_scan_integrator_msg::srv::ToggleSegmentation::Response> response) {
+      const std::shared_ptr<
+          laser_scan_integrator_msg::srv::ToggleSegmentation::Request>
+          request,
+      std::shared_ptr<
+          laser_scan_integrator_msg::srv::ToggleSegmentation::Response>
+          response) {
 
     segmentation_enabled_ = request->enable_segmentation;
 
     if (segmentation_enabled_) {
-        response->success = true;
-        response->message = "Segmentation enabled.";
-        RCLCPP_INFO(this->get_logger(), "Segmentation has been enabled.");
+      response->success = true;
+      response->message = "Segmentation enabled.";
+      RCLCPP_INFO(this->get_logger(), "Segmentation has been enabled.");
     } else {
-        response->success = true;
-        response->message = "Segmentation disabled.";
-        RCLCPP_INFO(this->get_logger(), "Segmentation has been disabled.");
+      response->success = true;
+      response->message = "Segmentation disabled.";
+      RCLCPP_INFO(this->get_logger(), "Segmentation has been disabled.");
     }
   }
 
-
   // Create point cloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr laser_scan_to_pointcloud(
-      const sensor_msgs::msg::LaserScan::SharedPtr &scan) {
-      auto cloud = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(); 
-      for (size_t i = 0; i < scan->ranges.size(); ++i) {
-          float range = scan->ranges[i];
-          if (range >= scan->range_min && range <= scan->range_max) {
-              float angle = scan->angle_min + i * scan->angle_increment;
-              cloud->points.emplace_back(range * std::cos(angle), range * std::sin(angle), 0.0f);
-          }
+  pcl::PointCloud<pcl::PointXYZ>::Ptr
+  laser_scan_to_pointcloud(const sensor_msgs::msg::LaserScan::SharedPtr &scan) {
+    auto cloud = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+    for (size_t i = 0; i < scan->ranges.size(); ++i) {
+      float range = scan->ranges[i];
+      if (range >= scan->range_min && range <= scan->range_max) {
+        float angle = scan->angle_min + i * scan->angle_increment;
+        cloud->points.emplace_back(range * std::cos(angle),
+                                   range * std::sin(angle), 0.0f);
       }
-      return cloud;
+    }
+    return cloud;
   }
 
-  void publishPointCloud(const sensor_msgs::msg::LaserScan::SharedPtr &scan){
-	    // 1. LaserScan -> pcl::PointCloud<pcl::PointXYZ>
-	    auto pcl_cloud = laser_scan_to_pointcloud(scan);
+  void publishPointCloud(const sensor_msgs::msg::LaserScan::SharedPtr &scan) {
+    // 1. LaserScan -> pcl::PointCloud<pcl::PointXYZ>
+    auto pcl_cloud = laser_scan_to_pointcloud(scan);
 
-	    // 2. pcl::PointCloud -> sensor_msgs::msg::PointCloud2
-	    sensor_msgs::msg::PointCloud2 ros_cloud;
-	    pcl::toROSMsg(*pcl_cloud, ros_cloud);
+    // 2. pcl::PointCloud -> sensor_msgs::msg::PointCloud2
+    sensor_msgs::msg::PointCloud2 ros_cloud;
+    pcl::toROSMsg(*pcl_cloud, ros_cloud);
 
-	    // 3. Header setzen
-	    ros_cloud.header.stamp = this->now();
-	    ros_cloud.header.frame_id =  scan->header.frame_id;
-	    // Wähle das Frame so, dass es zu deiner TF-Tree-Konfiguration passt
+    // 3. Header setzen
+    ros_cloud.header.stamp = this->now();
+    ros_cloud.header.frame_id = scan->header.frame_id;
+    // Wähle das Frame so, dass es zu deiner TF-Tree-Konfiguration passt
 
-	    // 4. Veröffentlichen
-	    pub_pointcloud_->publish(ros_cloud);
-}
+    // 4. Veröffentlichen
+    pub_pointcloud_->publish(ros_cloud);
+  }
 
   // Line segmentation
-  std::vector<laser_scan_integrator_msg::msg::LineSegment> detect_lines(
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, 
-    float target_length = 0.7f, 
-    float length_tolerance = 0.02f) {
+  std::vector<laser_scan_integrator_msg::msg::LineSegment>
+  detect_lines(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,
+               float target_length = 0.7f, float length_tolerance = 0.02f) {
 
-      std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
+    std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
 
-      // Default value for distance tolerance, assuming a target length of 80 cm
-      float distance_tolerance = 0.03f;
+    // Default value for distance tolerance, assuming a target length of 80 cm
+    float distance_tolerance = 0.03f;
 
+    // Configure SAC segmentation
+    pcl::SACSegmentation<pcl::PointXYZ> seg;
+    seg.setOptimizeCoefficients(true);
+    // This is commented out because it leads to the following error during
+    // execution: [laser_scan_integrator-10]
+    // [pcl::SampleConsensusModelLine::optimizeModelCoefficients] Not enough
+    // inliers to refine/optimize the model's coefficients (2)! Returning the
+    // same coefficients.
+    seg.setModelType(pcl::SACMODEL_LINE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(distance_tolerance);
+    seg.setMaxIterations(1000);
+    // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new
+    // pcl::search::KdTree<pcl::PointXYZ>()); seg.setSamplesMaxDist(0.4, tree);
 
-      // Configure SAC segmentation
-      pcl::SACSegmentation<pcl::PointXYZ> seg;
-      seg.setOptimizeCoefficients(true); 
-      // This is commented out because it leads to the following error during execution:
-      // [laser_scan_integrator-10] [pcl::SampleConsensusModelLine::optimizeModelCoefficients] 
-      // Not enough inliers to refine/optimize the model's coefficients (2)! Returning the same coefficients.
-      seg.setModelType(pcl::SACMODEL_LINE);
-      seg.setMethodType(pcl::SAC_RANSAC);
-      seg.setDistanceThreshold(distance_tolerance);
-      seg.setMaxIterations(1000);
-      // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>()); 
-      // seg.setSamplesMaxDist(0.4, tree); 
+    // Meomeor leak noch mal drüber schauen liebr einen unique pointer erstellen
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
 
-      
-      // Meomeor leak noch mal drüber schauen liebr einen unique pointer erstellen
-      pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-      pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    // Create a copy of the input point cloud to modify during processing
+    auto cloud_copy = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(*cloud);
 
-      // Create a copy of the input point cloud to modify during processing
-      auto cloud_copy = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(*cloud);
+    // Process the point cloud until fewer than 3 points remain (minimum for a
+    // line)
+    while (cloud_copy->size() > 2) {
+      seg.setInputCloud(cloud_copy);
+      seg.segment(*inliers, *coefficients);
 
-      // Process the point cloud until fewer than 3 points remain (minimum for a line)
-      while (cloud_copy->size() > 2) {
-          seg.setInputCloud(cloud_copy);
-          seg.segment(*inliers, *coefficients);
-
-          // If no inliers are found, stop the loop
-          if (inliers->indices.empty()) {
-              break; // No line found
-          }
-
-          pcl::PointXYZ pt1, pt2;
-          float line_length = 0.0f;
-
-          if (coefficients->values.size() >= 6) {
-              // Point on the line
-              Eigen::Vector3f point_on_line(coefficients->values[0],
-                                            coefficients->values[1],
-                                            coefficients->values[2]);
-              // Direction vector of the line
-              Eigen::Vector3f direction(coefficients->values[3],
-                                        coefficients->values[4],
-                                        coefficients->values[5]);
-              direction.normalize();
-
-              // Determine the minimum and maximum projection onto the line
-              float min_proj =  std::numeric_limits<float>::infinity();
-              float max_proj = -std::numeric_limits<float>::infinity();
-
-              for (auto idx : inliers->indices) {
-                  const auto &p = cloud_copy->points[idx];
-                  Eigen::Vector3f point(p.x, p.y, p.z);
-                  float projection = direction.dot(point - point_on_line);
-
-                  if (projection < min_proj) {
-                      min_proj = projection;
-                  }
-                  if (projection > max_proj) {
-                      max_proj = projection;
-                  }
-              }
-
-              // Compute the actual endpoints of the line
-              Eigen::Vector3f start_point = point_on_line + min_proj * direction;
-              Eigen::Vector3f end_point   = point_on_line + max_proj * direction;
-
-              pt1.x = start_point.x();
-              pt1.y = start_point.y();
-              pt1.z = start_point.z();
-
-              pt2.x = end_point.x();
-              pt2.y = end_point.y();
-              pt2.z = end_point.z();
-
-              line_length = (end_point - start_point).norm();
-          }
-
-          // Check if the line length falls within the specified tolerance
-          if (std::abs(line_length - target_length) <= length_tolerance) {
-              laser_scan_integrator_msg::msg::LineSegment line_msg;
-              line_msg.frame_id = "robotininobase1/laser_link";// CHange later
-              line_msg.end_point1.x = pt1.x;
-              line_msg.end_point1.y = pt1.y;
-              line_msg.end_point1.z = pt1.z;
-              line_msg.end_point2.x = pt2.x;
-              line_msg.end_point2.y = pt2.y;
-              line_msg.end_point2.z = pt2.z;
-              line_msg.line_length = line_length;
-
-              detected_lines.push_back(line_msg);
-          }
-
-          // Remove the segmented points from the point cloud
-          pcl::ExtractIndices<pcl::PointXYZ> extract;
-          extract.setInputCloud(cloud_copy);
-          extract.setIndices(inliers);
-          extract.setNegative(true);
-          extract.filter(*cloud_copy);
+      // If no inliers are found, stop the loop
+      if (inliers->indices.empty()) {
+        break; // No line found
       }
 
-      return detected_lines;
-  }
+      pcl::PointXYZ pt1, pt2;
+      float line_length = 0.0f;
 
-
-
-std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
-           unsigned int                                  segm_min_inliers = 20,
-           unsigned int                                  segm_max_iterations = 250,
-           float                                         segm_distance_threshold = 0.05f,
-           float                                         segm_sample_max_dist = 0.15f,
-           float                                         cluster_tolerance = 0.07f,
-           float                                         cluster_quota = 0.1f,
-           float                                         min_length = 0.6f,
-           float                                         max_length = 0.8f,
-           float                                         min_dist = 0.1f,
-           float                                         max_dist = 2,
-           typename pcl::PointCloud<pcl::PointXYZ>::Ptr      remaining_cloud = typename pcl::PointCloud<pcl::PointXYZ>::Ptr()) {
-
-
-	typename pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-
-	{
-		// Erase non-finite points
-		pcl::PassThrough<pcl::PointXYZ> passthrough;
-		passthrough.setInputCloud(input);
-		passthrough.filter(*in_cloud);
-	}
-
-	pcl::ModelCoefficients::Ptr coeff(new pcl::ModelCoefficients());
-	pcl::PointIndices::Ptr      inliers(new pcl::PointIndices());
-
-  std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
-
-	while (in_cloud->points.size() > segm_min_inliers) {
-		// Segment the largest linear component from the remaining cloud
-		//logger->log_info(name(), "[L %u] %zu points left",
-		//		     loop_count_, in_cloud->points.size());
-
-		typename pcl::search::KdTree<pcl::PointXYZ>::Ptr search(new pcl::search::KdTree<pcl::PointXYZ>);
-		search->setInputCloud(in_cloud);
-
-		pcl::SACSegmentation<pcl::PointXYZ> seg;
-		seg.setOptimizeCoefficients(true);
-		seg.setModelType(pcl::SACMODEL_LINE);
-		seg.setMethodType(pcl::SAC_RANSAC);
-		seg.setMaxIterations(segm_max_iterations);
-		seg.setDistanceThreshold(segm_distance_threshold);
-		seg.setSamplesMaxDist(segm_sample_max_dist, search);
-		seg.setInputCloud(in_cloud);
-		seg.segment(*inliers, *coeff);
-		RCLCPP_INFO(this->get_logger(), "Inliers (Anzahl: %zu):", inliers->indices.size());
-		for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
-  			RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i, inliers->indices[i]);
-		}
-		if (inliers->indices.size() == 0) {
-			// no line found
-			break;
-		}
-
-		// check for a minimum number of expected inliers
-		if ((double)inliers->indices.size() < segm_min_inliers) {
-			//logger->log_warn(name(), "[L %u] no more lines (%zu inliers, required %u)",
-			//	       loop_count_, inliers->indices.size(), segm_min_inliers);
-			break;
-		}
-
-		//logger->log_info(name(), "[L %u] Found line with %zu inliers",
-		//		     loop_count_, inliers->indices.size());
-
-		// Cluster within the line to make sure it is a contiguous line
-		// the line search can output a line which combines lines at separate
-		// ends of the field of view...
-
-		typename pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_line_cluster(
-		  new pcl::search::KdTree<pcl::PointXYZ>());
-		typename pcl::search::KdTree<pcl::PointXYZ>::IndicesConstPtr search_indices(
-		  new std::vector<int>(inliers->indices));
-		kdtree_line_cluster->setInputCloud(in_cloud, search_indices);
-
-		std::vector<pcl::PointIndices>             line_cluster_indices;
-		pcl::EuclideanClusterExtraction<pcl::PointXYZ> line_ec;
-		line_ec.setClusterTolerance(cluster_tolerance);
-		size_t min_size = (size_t)floorf(cluster_quota * inliers->indices.size());
-		line_ec.setMinClusterSize(min_size);
-		line_ec.setMaxClusterSize(inliers->indices.size());
-		line_ec.setSearchMethod(kdtree_line_cluster);
-		line_ec.setInputCloud(in_cloud);
-		line_ec.setIndices(inliers);
-		line_ec.extract(line_cluster_indices);
-
-		pcl::PointIndices::Ptr line_cluster_index;
-		if (!line_cluster_indices.empty()) {
-			line_cluster_index = pcl::PointIndices::Ptr(new pcl::PointIndices(line_cluster_indices[0]));
-		}
-
-		// re-calculate coefficients based on line cluster only
-		if (line_cluster_index) {
-		pcl::SACSegmentation<pcl::PointXYZ> segc;
-			segc.setOptimizeCoefficients(true);
-			segc.setModelType(pcl::SACMODEL_LINE);
-			segc.setMethodType(pcl::SAC_RANSAC);
-			segc.setMaxIterations(segm_max_iterations);
-			segc.setDistanceThreshold(segm_distance_threshold);
-			segc.setInputCloud(in_cloud);
-			segc.setIndices(line_cluster_index);
-			pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
-			segc.segment(*tmp_index, *coeff);
-			*line_cluster_index = *tmp_index;
-			RCLCPP_INFO(this->get_logger(), "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
-			for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
-        	                RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i, tmp_index->indices[i]);
-	                }
-
-
-		}
-
-		// Remove the linear or clustered inliers, extract the rest
-		typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f(new pcl::PointCloud<pcl::PointXYZ>());
-		typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_line(new pcl::PointCloud<pcl::PointXYZ>());
-		pcl::ExtractIndices<pcl::PointXYZ>           extract;
-		extract.setInputCloud(in_cloud);
-		extract.setIndices(
-		  (line_cluster_index && !line_cluster_index->indices.empty()) ? line_cluster_index : inliers);
-		extract.setNegative(false);
-		extract.filter(*cloud_line);
-
-		extract.setNegative(true);
-		extract.filter(*cloud_f);
-		*in_cloud = *cloud_f;
-
-		if (!line_cluster_index || line_cluster_index->indices.empty()){
-			continue;
-		}
-        pcl::PointXYZ pt1, pt2;
-        float line_length = 0.0f;
+      if (coefficients->values.size() >= 6) {
         // Point on the line
-        Eigen::Vector3f point_on_line(
-                                    coeff->values[0],
-                                    coeff->values[1],
-                                    coeff->values[2]);
+        Eigen::Vector3f point_on_line(coefficients->values[0],
+                                      coefficients->values[1],
+                                      coefficients->values[2]);
         // Direction vector of the line
-        Eigen::Vector3f direction(coeff->values[3],
-                                coeff->values[4],
-                                coeff->values[5]);
+        Eigen::Vector3f direction(coefficients->values[3],
+                                  coefficients->values[4],
+                                  coefficients->values[5]);
         direction.normalize();
 
         // Determine the minimum and maximum projection onto the line
-        float min_proj =  std::numeric_limits<float>::infinity();
+        float min_proj = std::numeric_limits<float>::infinity();
         float max_proj = -std::numeric_limits<float>::infinity();
 
-        for (const auto &p : cloud_line->points) {
-	//for (auto idx : inliers->indices) {
-  	  //const auto &p = in_cloud->points[idx];  
-
+        for (auto idx : inliers->indices) {
+          const auto &p = cloud_copy->points[idx];
           Eigen::Vector3f point(p.x, p.y, p.z);
-            float projection = direction.dot(point - point_on_line);
+          float projection = direction.dot(point - point_on_line);
 
-            if (projection < min_proj) {
-                min_proj = projection;
-            }
-            if (projection > max_proj) {
-                max_proj = projection;
-            }
+          if (projection < min_proj) {
+            min_proj = projection;
+          }
+          if (projection > max_proj) {
+            max_proj = projection;
+          }
         }
 
         // Compute the actual endpoints of the line
         Eigen::Vector3f start_point = point_on_line + min_proj * direction;
-        Eigen::Vector3f end_point   = point_on_line + max_proj * direction;
+        Eigen::Vector3f end_point = point_on_line + max_proj * direction;
 
         pt1.x = start_point.x();
         pt1.y = start_point.y();
@@ -462,15 +280,12 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
         pt2.z = end_point.z();
 
         line_length = (end_point - start_point).norm();
-        
-        // if (line_length == 0 || (min_length >= 0 && line_length < min_length)
-       //                   || (max_length >= 0 && line_length > max_length)) {
-       if (line_length == 0 || (line_length < 0.65 || line_length > 0.75)){
-        continue;
-                }
+      }
 
+      // Check if the line length falls within the specified tolerance
+      if (std::abs(line_length - target_length) <= length_tolerance) {
         laser_scan_integrator_msg::msg::LineSegment line_msg;
-        line_msg.frame_id = integratedFrameId_;// CHange later
+        line_msg.frame_id = "robotininobase1/laser_link"; // CHange later
         line_msg.end_point1.x = pt1.x;
         line_msg.end_point1.y = pt1.y;
         line_msg.end_point1.z = pt1.z;
@@ -479,61 +294,272 @@ std::vector<laser_scan_integrator_msg::msg::LineSegment> calc_lines(typename pcl
         line_msg.end_point2.z = pt2.z;
         line_msg.line_length = line_length;
 
-		detected_lines.push_back(line_msg);
-	}
+        detected_lines.push_back(line_msg);
+      }
 
-	if (remaining_cloud) {
-		*remaining_cloud = *in_cloud;
-	}
+      // Remove the segmented points from the point cloud
+      pcl::ExtractIndices<pcl::PointXYZ> extract;
+      extract.setInputCloud(cloud_copy);
+      extract.setIndices(inliers);
+      extract.setNegative(true);
+      extract.filter(*cloud_copy);
+    }
 
-	return detected_lines;
-}
-
-// Methode zum Erstellen und sofortigen Publizieren von Linien-Markern in RViz
-void publishLineMarkers(const std::vector<laser_scan_integrator_msg::msg::LineSegment> &lines,
-                        const std_msgs::msg::Header &header)
-{
-  for (const auto &line : lines) {
-    visualization_msgs::msg::Marker marker;
-    marker.header = header;                  // Übernahme des Headers
-    marker.ns = "line_markers";              // Namespace für die Linien-Marker
-    static int marker_id = 0;                // Eindeutige ID für jeden Marker
-    marker.id = marker_id++;
-    marker.type = visualization_msgs::msg::Marker::LINE_LIST; // Verwendung von LINE_LIST, da je Marker zwei Punkte definiert
-    marker.action = visualization_msgs::msg::Marker::ADD;
-
-    // Skalierung: Die Breite der Linie
-    marker.scale.x = 0.05; // Passen Sie diesen Wert bei Bedarf an
-
-    // Farbe: Beispielweise ein kräftiges Grün (voll opak)
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
-    marker.color.a = 1.0;
-
-    // Unbegrenzte Lebensdauer
-    marker.lifetime = rclcpp::Duration(0, 0);
-
-    // Definieren der Endpunkte der Linie
-    geometry_msgs::msg::Point p1, p2;
-    p1.x = line.end_point1.x;
-    p1.y = line.end_point1.y;
-    p1.z = line.end_point1.z;
-    p2.x = line.end_point2.x;
-    p2.y = line.end_point2.y;
-    p2.z = line.end_point2.z;
-
-    marker.points.push_back(p1);
-    marker.points.push_back(p2);
-
-    // Publizieren des Markers
-    marker_pub_->publish(marker);
+    return detected_lines;
   }
-}
 
+  std::vector<laser_scan_integrator_msg::msg::LineSegment>
+  calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
+             unsigned int segm_min_inliers = 20,
+             unsigned int segm_max_iterations = 250,
+             float segm_distance_threshold = 0.05f,
+             float segm_sample_max_dist = 0.15f,
+             float cluster_tolerance = 0.07f, float cluster_quota = 0.1f,
+             float min_length = 0.6f, float max_length = 0.8f,
+             float min_dist = 0.1f, float max_dist = 2,
+             typename pcl::PointCloud<pcl::PointXYZ>::Ptr remaining_cloud =
+                 typename pcl::PointCloud<pcl::PointXYZ>::Ptr()) {
 
-  void update_point_cloud_rgb() {pcl::PointCloud<pcl::PointXYZ>::Ptr
-    refresh_params();
+    typename pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud(
+        new pcl::PointCloud<pcl::PointXYZ>());
+
+    {
+      // Erase non-finite points
+      pcl::PassThrough<pcl::PointXYZ> passthrough;
+      passthrough.setInputCloud(input);
+      passthrough.filter(*in_cloud);
+    }
+
+    pcl::ModelCoefficients::Ptr coeff(new pcl::ModelCoefficients());
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+
+    std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
+
+    while (in_cloud->points.size() > segm_min_inliers) {
+      // Segment the largest linear component from the remaining cloud
+      // logger->log_info(name(), "[L %u] %zu points left",
+      //		     loop_count_, in_cloud->points.size());
+
+      typename pcl::search::KdTree<pcl::PointXYZ>::Ptr search(
+          new pcl::search::KdTree<pcl::PointXYZ>);
+      search->setInputCloud(in_cloud);
+
+      pcl::SACSegmentation<pcl::PointXYZ> seg;
+      seg.setOptimizeCoefficients(true);
+      seg.setModelType(pcl::SACMODEL_LINE);
+      seg.setMethodType(pcl::SAC_RANSAC);
+      seg.setMaxIterations(segm_max_iterations);
+      seg.setDistanceThreshold(segm_distance_threshold);
+      seg.setSamplesMaxDist(segm_sample_max_dist, search);
+      seg.setInputCloud(in_cloud);
+      seg.segment(*inliers, *coeff);
+      RCLCPP_INFO(this->get_logger(),
+                  "Inliers (Anzahl: %zu):", inliers->indices.size());
+      for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
+        RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i,
+                    inliers->indices[i]);
+      }
+      if (inliers->indices.size() == 0) {
+        // no line found
+        break;
+      }
+
+      // check for a minimum number of expected inliers
+      if ((double)inliers->indices.size() < segm_min_inliers) {
+        // logger->log_warn(name(), "[L %u] no more lines (%zu inliers, required
+        // %u)", 	       loop_count_, inliers->indices.size(),
+        // segm_min_inliers);
+        break;
+      }
+
+      // logger->log_info(name(), "[L %u] Found line with %zu inliers",
+      //		     loop_count_, inliers->indices.size());
+
+      // Cluster within the line to make sure it is a contiguous line
+      // the line search can output a line which combines lines at separate
+      // ends of the field of view...
+
+      typename pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree_line_cluster(
+          new pcl::search::KdTree<pcl::PointXYZ>());
+      typename pcl::search::KdTree<pcl::PointXYZ>::IndicesConstPtr
+          search_indices(new std::vector<int>(inliers->indices));
+      kdtree_line_cluster->setInputCloud(in_cloud, search_indices);
+
+      std::vector<pcl::PointIndices> line_cluster_indices;
+      pcl::EuclideanClusterExtraction<pcl::PointXYZ> line_ec;
+      line_ec.setClusterTolerance(cluster_tolerance);
+      size_t min_size = (size_t)floorf(cluster_quota * inliers->indices.size());
+      line_ec.setMinClusterSize(min_size);
+      line_ec.setMaxClusterSize(inliers->indices.size());
+      line_ec.setSearchMethod(kdtree_line_cluster);
+      line_ec.setInputCloud(in_cloud);
+      line_ec.setIndices(inliers);
+      line_ec.extract(line_cluster_indices);
+
+      pcl::PointIndices::Ptr line_cluster_index;
+      if (!line_cluster_indices.empty()) {
+        line_cluster_index = pcl::PointIndices::Ptr(
+            new pcl::PointIndices(line_cluster_indices[0]));
+      }
+
+      // re-calculate coefficients based on line cluster only
+      if (line_cluster_index) {
+        pcl::SACSegmentation<pcl::PointXYZ> segc;
+        segc.setOptimizeCoefficients(true);
+        segc.setModelType(pcl::SACMODEL_LINE);
+        segc.setMethodType(pcl::SAC_RANSAC);
+        segc.setMaxIterations(segm_max_iterations);
+        segc.setDistanceThreshold(segm_distance_threshold);
+        segc.setInputCloud(in_cloud);
+        segc.setIndices(line_cluster_index);
+        pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
+        segc.segment(*tmp_index, *coeff);
+        *line_cluster_index = *tmp_index;
+        RCLCPP_INFO(this->get_logger(),
+                    "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
+        for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
+          RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i,
+                      tmp_index->indices[i]);
+        }
+      }
+
+      // Remove the linear or clustered inliers, extract the rest
+      typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f(
+          new pcl::PointCloud<pcl::PointXYZ>());
+      typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_line(
+          new pcl::PointCloud<pcl::PointXYZ>());
+      pcl::ExtractIndices<pcl::PointXYZ> extract;
+      extract.setInputCloud(in_cloud);
+      extract.setIndices(
+          (line_cluster_index && !line_cluster_index->indices.empty())
+              ? line_cluster_index
+              : inliers);
+      extract.setNegative(false);
+      extract.filter(*cloud_line);
+
+      extract.setNegative(true);
+      extract.filter(*cloud_f);
+      *in_cloud = *cloud_f;
+
+      if (!line_cluster_index || line_cluster_index->indices.empty()) {
+        continue;
+      }
+      pcl::PointXYZ pt1, pt2;
+      float line_length = 0.0f;
+      // Point on the line
+      Eigen::Vector3f point_on_line(coeff->values[0], coeff->values[1],
+                                    coeff->values[2]);
+      // Direction vector of the line
+      Eigen::Vector3f direction(coeff->values[3], coeff->values[4],
+                                coeff->values[5]);
+      direction.normalize();
+
+      // Determine the minimum and maximum projection onto the line
+      float min_proj = std::numeric_limits<float>::infinity();
+      float max_proj = -std::numeric_limits<float>::infinity();
+
+      for (const auto &p : cloud_line->points) {
+        // for (auto idx : inliers->indices) {
+        // const auto &p = in_cloud->points[idx];
+
+        Eigen::Vector3f point(p.x, p.y, p.z);
+        float projection = direction.dot(point - point_on_line);
+
+        if (projection < min_proj) {
+          min_proj = projection;
+        }
+        if (projection > max_proj) {
+          max_proj = projection;
+        }
+      }
+
+      // Compute the actual endpoints of the line
+      Eigen::Vector3f start_point = point_on_line + min_proj * direction;
+      Eigen::Vector3f end_point = point_on_line + max_proj * direction;
+
+      pt1.x = start_point.x();
+      pt1.y = start_point.y();
+      pt1.z = start_point.z();
+
+      pt2.x = end_point.x();
+      pt2.y = end_point.y();
+      pt2.z = end_point.z();
+
+      line_length = (end_point - start_point).norm();
+
+      // if (line_length == 0 || (min_length >= 0 && line_length < min_length)
+      //                   || (max_length >= 0 && line_length > max_length)) {
+      if (line_length == 0 || (line_length < 0.65 || line_length > 0.75)) {
+        continue;
+      }
+
+      laser_scan_integrator_msg::msg::LineSegment line_msg;
+      line_msg.frame_id = integratedFrameId_; // CHange later
+      line_msg.end_point1.x = pt1.x;
+      line_msg.end_point1.y = pt1.y;
+      line_msg.end_point1.z = pt1.z;
+      line_msg.end_point2.x = pt2.x;
+      line_msg.end_point2.y = pt2.y;
+      line_msg.end_point2.z = pt2.z;
+      line_msg.line_length = line_length;
+
+      detected_lines.push_back(line_msg);
+    }
+
+    if (remaining_cloud) {
+      *remaining_cloud = *in_cloud;
+    }
+
+    return detected_lines;
+  }
+
+  // Methode zum Erstellen und sofortigen Publizieren von Linien-Markern in RViz
+  void publishLineMarkers(
+      const std::vector<laser_scan_integrator_msg::msg::LineSegment> &lines,
+      const std_msgs::msg::Header &header) {
+    for (const auto &line : lines) {
+      visualization_msgs::msg::Marker marker;
+      marker.header = header;     // Übernahme des Headers
+      marker.ns = "line_markers"; // Namespace für die Linien-Marker
+      static int marker_id = 0;   // Eindeutige ID für jeden Marker
+      marker.id = marker_id++;
+      marker.type =
+          visualization_msgs::msg::Marker::LINE_LIST; // Verwendung von
+                                                      // LINE_LIST, da je Marker
+                                                      // zwei Punkte definiert
+      marker.action = visualization_msgs::msg::Marker::ADD;
+
+      // Skalierung: Die Breite der Linie
+      marker.scale.x = 0.05; // Passen Sie diesen Wert bei Bedarf an
+
+      // Farbe: Beispielweise ein kräftiges Grün (voll opak)
+      marker.color.r = 0.0;
+      marker.color.g = 1.0;
+      marker.color.b = 0.0;
+      marker.color.a = 1.0;
+
+      // Unbegrenzte Lebensdauer
+      marker.lifetime = rclcpp::Duration(0, 0);
+
+      // Definieren der Endpunkte der Linie
+      geometry_msgs::msg::Point p1, p2;
+      p1.x = line.end_point1.x;
+      p1.y = line.end_point1.y;
+      p1.z = line.end_point1.z;
+      p2.x = line.end_point2.x;
+      p2.y = line.end_point2.y;
+      p2.z = line.end_point2.z;
+
+      marker.points.push_back(p1);
+      marker.points.push_back(p2);
+
+      // Publizieren des Markers
+      marker_pub_->publish(marker);
+    }
+  }
+
+  void update_point_cloud_rgb() {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr refresh_params();
     trans1_ = tf2_->lookupTransform(integratedFrameId_,
                                     laser1_->header.frame_id, rclcpp::Time(0));
     trans2_ = tf2_->lookupTransform(integratedFrameId_,
@@ -590,7 +616,7 @@ void publishLineMarkers(const std::vector<laser_scan_integrator_msg::msg::LineSe
       }
     }
 
-    //Second scanner
+    // Second scanner
     count = 0;
     if (show2_) {
       for (float i = laser2_->angle_min; i <= laser2_->angle_max;
@@ -675,20 +701,23 @@ void publishLineMarkers(const std::vector<laser_scan_integrator_msg::msg::LineSe
 
       // Convert the integrated laser scan into a point cloud
       auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
-      //publishPointCloud(integrated_msg_);
-      // Detect lines in the point cloud with a target length of 70 cm and a tolerance of 2 cm
-      //auto lines = detect_lines(pointcloud, 0.7f, 0.02f);
+      // publishPointCloud(integrated_msg_);
+      //  Detect lines in the point cloud with a target length of 70 cm and a
+      //  tolerance of 2 cm
+      // auto lines = detect_lines(pointcloud, 0.7f, 0.02f);
       auto lines = calc_lines(pointcloud);
 
       // Convert the detected lines into a ROS message format
       laser_scan_integrator_msg::msg::LineSegments lines_msg;
-      lines_msg.header = integrated_msg_->header; // Retain the original message header for consistency
+      lines_msg.header =
+          integrated_msg_
+              ->header; // Retain the original message header for consistency
       lines_msg.segments = lines; // Add the detected line segments
 
       // Publish the line segments as a ROS message
       line_segments_pub_->publish(lines_msg);
       publishLineMarkers(lines, integrated_msg_->header);
-    }    
+    }
   }
 
   float GET_R(float x, float y) { return sqrt(x * x + y * y); }

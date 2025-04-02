@@ -20,13 +20,11 @@ find_package(Eigen3 REQUIRED)
 find_package(visualization_msgs REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-
-
 add_executable(tf_publisher src/tf_publisher.cpp)
 ament_target_dependencies(
   tf_publisher
-  rclcpp 
-  tf2_ros 
+  rclcpp
+  tf2_ros
   geometry_msgs
   ament_index_cpp
 )
@@ -35,10 +33,10 @@ target_link_libraries(tf_publisher yaml-cpp::yaml-cpp)
 add_executable(mapper src/mapper.cpp)
 ament_target_dependencies(
   mapper
-  rclcpp 
-  tf2_ros 
-  tf2 
-  tf2_geometry_msgs 
+  rclcpp
+  tf2_ros
+  tf2
+  tf2_geometry_msgs
   geometry_msgs
   laser_scan_integrator_msg
   Eigen3
@@ -52,17 +50,15 @@ target_link_libraries(mapper
   yaml-cpp::yaml-cpp
 )
 
-install(TARGETS 
-tf_publisher 
-mapper 
+install(TARGETS
+tf_publisher
+mapper
 DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}
 )
-
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

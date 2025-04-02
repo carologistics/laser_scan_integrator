@@ -39,12 +39,12 @@ include_directories(
   include
   ${PCL_INCLUDE_DIRS}
 )
-  
+
 # Executable
 add_executable(laser_scan_integrator src/main.cpp)
-ament_target_dependencies(laser_scan_integrator 
-  rclcpp 
-  std_msgs 
+ament_target_dependencies(laser_scan_integrator
+  rclcpp
+  std_msgs
   sensor_msgs
   tf2_sensor_msgs
   rcl_interfaces
@@ -63,7 +63,7 @@ ament_target_dependencies(laser_scan_integrator
 # Link PCL librariesrosidl_generate_interfaces
 target_link_libraries(laser_scan_integrator ${PCL_LIBRARIES})
 
-	
+
 # Export dependencies
 ament_export_dependencies(laser_scan_integrator_msg)
 
@@ -89,4 +89,3 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
-

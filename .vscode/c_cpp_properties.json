@@ -8,7 +8,7 @@
             "includePath": [
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/src",
-                "/usr/include/**", 
+                "/usr/include/**",
                 "${workspaceFolder}/**"
             ],
             "defines": []

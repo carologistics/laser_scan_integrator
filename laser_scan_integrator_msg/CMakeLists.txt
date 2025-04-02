@@ -20,9 +20,6 @@ set(service_files
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME} ${service_files} DEPENDENCIES builtin_interfaces geometry_msgs std_msgs)
-  
-  
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
