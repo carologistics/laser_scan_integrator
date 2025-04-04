@@ -12,21 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <chrono>
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <string>
-#include <thread>
-#include <vector>
-
-// Eigen-Bibliothek
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-
-// ROS2
+#include "ament_index_cpp/get_package_share_directory.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "laser_scan_integrator_msg/msg/line_segments.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -35,19 +21,20 @@
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
-
-// Marker
 #include "visualization_msgs/msg/marker.hpp"
-
-// YAML-CPP
-#include <yaml-cpp/yaml.h>
-
-// CMake: Zum Ermitteln des Share-Verzeichnisses
-#include "ament_index_cpp/get_package_share_directory.hpp"
-
-// WICHTIG: Header für tf2_geometry_msgs inkludieren, damit Template-Instanzen
-// erzeugt werden
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+#include <chrono>
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <thread>
+#include <vector>
+#include <yaml-cpp/yaml.h>
 
 using namespace std::chrono_literals;
 
@@ -58,20 +45,16 @@ public:
         tf_buffer_(std::make_unique<tf2_ros::Buffer>(this->get_clock())),
         tf_listener_(
             std::make_shared<tf2_ros::TransformListener>(*tf_buffer_)) {
-    // YAML laden (über den Share-Pfad)
     std::string share_dir =
         ament_index_cpp::get_package_share_directory("laser_scan_mapper");
     std::string yaml_file = share_dir + "/mapper_params.yaml";
-    RCLCPP_INFO(this->get_logger(), "Lade Maschinenliste aus YAML: %s",
+    RCLCPP_INFO(this->get_logger(), "Load machine names from YAML: %s",
                 yaml_file.c_str());
-
-    initialize_params();
-    refresh_params();
 
     if (!loadMachineNamesFromYaml(yaml_file, machine_names_)) {
       RCLCPP_ERROR(
           this->get_logger(),
-          "Konnte Maschine-Namen aus %s nicht laden. Node wird beendet.",
+          "Failed to load machine names from YAML: %s. Node will shut down.",
           yaml_file.c_str());
       rclcpp::shutdown();
       return;
@@ -96,59 +79,48 @@ public:
     // Subscriber für LineSegments
     sub_segments_ =
         this->create_subscription<laser_scan_integrator_msg::msg::LineSegments>(
-            "robotinobase4/line_segments", 10,
+            "line_segments", 10,
             std::bind(&MapperNode::segmentsCallback, this,
                       std::placeholders::_1));
 
     RCLCPP_INFO(this->get_logger(), "Mapper gestartet.");
+
+    ns_ = removeLeadingSlash(this->get_namespace());
   }
 
 private:
-  std::string frameID_;
-  std::string laser_link_frame_;
-  // Maschinenbreite und Toleranzen (SI-Einheiten)
-  // (Hinweis: Da y nun die Fahrtrichtung ist, entspricht machine_width_ der
-  // lateralen Ausdehnung entlang der x-Achse.)
-  const double machine_width_ = 0.35;     // 35 cm
-  const double position_tolerance_ = 0.3; // z. B. 30 cm
-  const double angle_tolerance_ = 0.5;    // z. B. 0.4 rad ~ 23°
-
-  // Für Maschinen-Rechteck:
-  // (Angepasst: Die Länge (Fahrtrichtung) liegt nun entlang der y-Achse und die
-  // Breite entlang der x-Achse.)
-  const double machine_length_ = 0.70; // z. B. 35 cm (Fahrtrichtung, y-Achse)
-  const double machine_height_ =
-      0.35; // z. B. 70 cm (seitliche Ausdehnung, x-Achse)
-  // Zähler für die Segmentmarker (Deklaration ohne Initialisierung!)
+  const double machine_width_ = 0.35;
+  const double position_tolerance_ = 0.3;
+  const double angle_tolerance_ = 0.5;
+  const double machine_length_ = 0.70;
   static int global_marker_id;
 
-  // TImer for ma
-  rclcpp::TimerBase::SharedPtr transform_timer_;
-
-  // Gelesene Maschinen-Namen aus YAML
   std::vector<std::string> machine_names_;
 
-  // Maschinen-Transforms (im Map-Frame)
   std::map<std::string, geometry_msgs::msg::TransformStamped>
       machine_transforms_;
 
-  // TF
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
-  // Marker-Publisher für segmentierte Linien (Topic: /mapped_segments)
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
 
-  // Marker-Publisher für Maschinen-Rechtecke (Topic: /machine_markers)
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
       machine_marker_pub_;
 
-  // Subscriber für LineSegments
   rclcpp::Subscription<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr
       sub_segments_;
 
-  // Funktion zum Laden der Maschinen-Namen aus YAML
+  std::string ns_;
+
+  std::string removeLeadingSlash(const std::string &ns) {
+    if (!ns.empty() && ns.front() == '/') {
+      return ns.substr(1);
+    }
+    return ns;
+  }
+
   bool loadMachineNamesFromYaml(const std::string &file_path,
                                 std::vector<std::string> &out_names) {
     try {
@@ -161,12 +133,11 @@ private:
         for (std::size_t i = 0; i < machine_node.size(); ++i) {
           out_names.push_back(machine_node[i].as<std::string>());
         }
-        RCLCPP_INFO(this->get_logger(),
-                    "Es wurden %zu Maschinen-Namen aus YAML geladen.",
+        RCLCPP_INFO(this->get_logger(), "%zu machine names loaded from YAML.",
                     out_names.size());
         return !out_names.empty();
       } else {
-        RCLCPP_ERROR(this->get_logger(), "Falsche YAML-Struktur in %s",
+        RCLCPP_ERROR(this->get_logger(), "Invalid YAML structure in %s",
                      file_path.c_str());
       }
     } catch (const YAML::Exception &e) {
@@ -175,39 +146,33 @@ private:
     return false;
   }
 
-  // Methode zum Erstellen und sofortigen Publizieren eines Maschinen-Markers
-  void publishSingleMachineMarker(
-      const std::string &machine_frame_id,
-      const geometry_msgs::msg::TransformStamped &transform_stamped) {
+  / void publishSingleMachineMarker(
+        const std::string &machine_frame_id,
+        const geometry_msgs::msg::TransformStamped &transform_stamped) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "map";
     marker.header.stamp = this->now();
     marker.ns = "machine_rectangles";
 
-    // Eindeutige ID für jeden Maschinen-Marker
     static int machine_marker_id = 0;
     marker.id = machine_marker_id++;
     marker.type = visualization_msgs::msg::Marker::CUBE;
     marker.action = visualization_msgs::msg::Marker::ADD;
 
-    // Pose aus dem Transform übernehmen
     marker.pose.position.x = transform_stamped.transform.translation.x;
     marker.pose.position.y = transform_stamped.transform.translation.y;
     marker.pose.position.z = transform_stamped.transform.translation.z;
     marker.pose.orientation = transform_stamped.transform.rotation;
 
-    // Skalierung: (Angepasst: Länge entlang y, Breite entlang x)
-    marker.scale.x = machine_height_;
+    marker.scale.x = machine_width_;
     marker.scale.y = machine_length_;
     marker.scale.z = 0.05;
 
-    // Farbe: Halbtransparentes Blau
     marker.color.r = 0.0;
     marker.color.g = 0.0;
     marker.color.b = 1.0;
     marker.color.a = 0.8;
 
-    // Unbegrenzte Lebensdauer
     marker.lifetime = rclcpp::Duration(0, 0);
 
     machine_marker_pub_->publish(marker);
@@ -218,36 +183,33 @@ private:
                 transform_stamped.transform.translation.y);
   }
 
-  // Maschinen-Transforms laden (im Map-Frame) und Marker sofort publizieren
   void updateMachineTransforms() {
     bool all_loaded = true;
     for (const auto &machine_frame_id : machine_names_) {
-      // Überspringe Maschinen, deren Transform bereits geladen wurde
       if (machine_transforms_.find(machine_frame_id) !=
           machine_transforms_.end()) {
         continue;
       }
       try {
-        RCLCPP_INFO(this->get_logger(), "Versuche Transform für %s zu laden...",
+        RCLCPP_INFO(this->get_logger(), "Try to load trasform for %s ...",
                     machine_frame_id.c_str());
         auto transform_stamped = tf_buffer_->lookupTransform(
             "map", machine_frame_id, tf2::TimePointZero);
         machine_transforms_[machine_frame_id] = transform_stamped;
         publishSingleMachineMarker(machine_frame_id, transform_stamped);
-        RCLCPP_INFO(this->get_logger(), "Transform für %s erfolgreich geladen.",
+        RCLCPP_INFO(this->get_logger(),
+                    "Transformation for %s successfully loaded",
                     machine_frame_id.c_str());
       } catch (const tf2::TransformException &ex) {
         RCLCPP_WARN(this->get_logger(),
-                    "Transform für %s noch nicht verfügbar: %s",
+                    "Transformation for %s is yet not available %s",
                     machine_frame_id.c_str(), ex.what());
         all_loaded = false;
       }
     }
 
     if (all_loaded) {
-      RCLCPP_INFO(this->get_logger(),
-                  "Alle Maschinen-Transforms sind jetzt verfügbar.");
-      // Timer stoppen, da alle Transforms geladen sind.
+      RCLCPP_INFO(this->get_logger(), "All transformation are now available");
       transform_timer_->cancel();
     }
   }
@@ -265,65 +227,26 @@ private:
         geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_base, pt2_base,
             pt1_map, pt2_map;
         pt1_in.header.stamp = this->now();
-        pt1_in.header.frame_id = laser_link_frame_;
+        pt1_in.header.frame_id = segment.frame_id;
         pt1_in.point = segment.end_point1;
 
         pt2_in.header = pt1_in.header;
         pt2_in.point = segment.end_point2;
 
         try {
-          pt1_base = tf_buffer_->transform(pt1_in, "robotinobase4/base_link",
-                                           tf2::durationFromSec(1.0));
-          pt2_base = tf_buffer_->transform(pt2_in, "robotinobase4/base_link",
-                                           tf2::durationFromSec(1.0));
-        } catch (const tf2::TransformException &ex) {
-          // Transformation of segment endpoints failed, skip this segment
-          continue;
-        }
-
-        // Calculate segment midpoint in base coordinates
-        Eigen::Vector2d segment_origin(
-            0.5 * (pt2_base.point.x + pt1_base.point.x),
-            0.5 * (pt2_base.point.y + pt1_base.point.y));
-
-        // Compute direction vector of the line in base coordinates
-        Eigen::Vector3d z(0.0, 0.0, 1.0);
-        Eigen::Vector3d segment_direction_3d =
-            Eigen::Vector3d(pt2_base.point.x - pt1_base.point.x,
-                            pt2_base.point.y - pt1_base.point.y, 0.0);
-        // Cross product with z gives a vector in the XY plane orthogonal to
-        // segment_direction_3d
-        Eigen::Vector3d segment_origin_y_3d = z.cross(segment_direction_3d);
-        Eigen::Vector2d segment_origin_y = segment_origin_y_3d.head<2>();
-
-        // Calculate the shifted segment center (e.g. to the side by
-        // machine_width_/2)
-        Eigen::Vector2d segment_center =
-            (machine_width_ / 2) * segment_origin_y.normalized() +
-            segment_origin;
-
-        // Create segment center point in base coordinates
-        geometry_msgs::msg::PointStamped segment_base;
-        segment_base.header.stamp = pt2_base.header.stamp;
-        segment_base.header.frame_id = laser_link_frame_;
-        segment_base.point.x = segment_center.x();
-        segment_base.point.y = segment_center.y();
-
-        // Transform all relevant points into the map frame
-        geometry_msgs::msg::PointStamped segment_map;
-        try {
-          segment_map = tf_buffer_->transform(segment_base, "map",
-                                              tf2::durationFromSec(1.0));
           pt1_map =
-              tf_buffer_->transform(pt1_base, "map", tf2::durationFromSec(1.0));
+              tf_buffer_->transform(pt1_in, "map", tf2::durationFromSec(1.0));
           pt2_map =
-              tf_buffer_->transform(pt2_base, "map", tf2::durationFromSec(1.0));
+              tf_buffer_->transform(pt2_in, "map", tf2::durationFromSec(1.0));
           RCLCPP_INFO(this->get_logger(), "pt1_map(1): x=%.3f, y=%.3f",
                       pt1_map.point.x, pt1_map.point.y);
           RCLCPP_INFO(this->get_logger(), "pt2_map(1): x=%.3f, y=%.3f",
                       pt2_map.point.x, pt2_map.point.y);
         } catch (const tf2::TransformException &ex) {
           // Transformation of segment center failed, skip this segment
+          RCLCPP_WARN(this->get_logger(),
+                      "Transformation von %s nach map fehlgeschlagen: %s",
+                      pt1_in.header.frame_id.c_str(), ex.what());
           continue;
         }
 
@@ -333,6 +256,7 @@ private:
             0.5 * (pt2_map.point.y + pt1_map.point.y));
         Eigen::Vector2d line(pt2_map.point.x - pt1_map.point.x,
                              pt2_map.point.y - pt1_map.point.y);
+        Eigen::Vector3d z(0.0, 0.0, 1.0);
         Eigen::Vector3d line_cross_3d =
             z.cross(Eigen::Vector3d(line.x(), line.y(), 0.0));
         Eigen::Vector2d line_cross = line_cross_3d.head<2>();
@@ -392,10 +316,6 @@ private:
           adjusted_yaw = (yaw > 0) ? yaw - M_PI : yaw + M_PI;
         }
 
-        // RCLCPP_INFO(this->get_logger(),
-        //             "Yaw Machine: %.3f, Yaw Line: %.3f, Yaw Diff: %.3f",
-        //             machine_yaw, line_angle, adjusted_yaw);
-
         // Reject segment if distance or angle exceed tolerances
         if (std::abs(distance) > position_tolerance_ ||
             std::abs(adjusted_yaw) > angle_tolerance_) {
@@ -422,7 +342,7 @@ private:
                               : 0));
         corrected_transform.transform.rotation = tf2::toMsg(corrected_q);
         corrected_transform.child_frame_id =
-            frameID_ + "/" + machine_frame_id + "-CORRECTED";
+            ns_ + "/" + machine_frame_id + "-CORRECTED";
         corrected_transform.header.stamp = this->now();
         RCLCPP_INFO(this->get_logger(),
                     "Corrected TF for %s (Segment[%zu]) published: x=%.3f, "
@@ -433,9 +353,6 @@ private:
 
         // Publish the corrected transform
         tf_broadcaster_->sendTransform(corrected_transform);
-
-        // --- Publish additional transforms along the x-axis of the corrected
-        // transform ---
 
         // Convert corrected_transform (geometry_msgs) to tf2::Transform
         tf2::Transform tf_corrected;
@@ -474,7 +391,7 @@ private:
         geometry_msgs::msg::TransformStamped input_transform =
             corrected_transform;
         input_transform.child_frame_id =
-            frameID_ + "/" + machine_frame_id + "-INPUTPUT-CORRECTED";
+            ns_ + machine_frame_id + "-INPUTPUT-CORRECTED";
         input_transform.transform = tf2::toMsg(tf_input);
         input_transform.header.stamp = this->now();
         tf_broadcaster_->sendTransform(input_transform);
@@ -483,7 +400,7 @@ private:
         geometry_msgs::msg::TransformStamped output_transform =
             corrected_transform;
         output_transform.child_frame_id =
-            frameID_ + "/" + machine_frame_id + "-OUTPUT-CORRECTED";
+            ns_ + machine_frame_id + "-OUTPUT-CORRECTED";
         output_transform.transform = tf2::toMsg(tf_output);
         output_transform.header.stamp = this->now();
         tf_broadcaster_->sendTransform(output_transform);
@@ -522,13 +439,6 @@ private:
     double roll, pitch, yaw;
     m.getRPY(roll, pitch, yaw);
     return yaw;
-  }
-
-  void initialize_params() { this->declare_parameter<std::string>("frameID"); }
-
-  void refresh_params() {
-    this->get_parameter_or<std::string>("frameID", frameID_);
-    laser_link_frame_ = frameID_ + "/laser_link";
   }
 };
 

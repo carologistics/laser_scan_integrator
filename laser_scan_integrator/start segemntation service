@@ -1,3 +1,0 @@
-Starting segmentation:
-
-ros2 service call /robotinobase1/toggle_segmentation laser_scan_integrator_msg/srv/ToggleSegmentation "{enable_segmentation: true}"
