@@ -20,16 +20,6 @@ find_package(Eigen3 REQUIRED)
 find_package(visualization_msgs REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-add_executable(tf_publisher src/tf_publisher.cpp)
-ament_target_dependencies(
-  tf_publisher
-  rclcpp
-  tf2_ros
-  geometry_msgs
-  ament_index_cpp
-)
-target_link_libraries(tf_publisher yaml-cpp::yaml-cpp)
-
 add_executable(mapper src/mapper.cpp)
 ament_target_dependencies(
   mapper
@@ -43,6 +33,7 @@ ament_target_dependencies(
   ament_index_cpp
   visualization_msgs
 )
+
 target_link_libraries(mapper
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs
@@ -51,7 +42,6 @@ target_link_libraries(mapper
 )
 
 install(TARGETS
-tf_publisher
 mapper
 DESTINATION lib/${PROJECT_NAME}
 )

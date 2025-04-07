@@ -95,6 +95,8 @@ private:
   const double machine_length_ = 0.70;
   static int global_marker_id;
 
+  rclcpp::TimerBase::SharedPtr transform_timer_;
+
   std::vector<std::string> machine_names_;
 
   std::map<std::string, geometry_msgs::msg::TransformStamped>
@@ -146,9 +148,9 @@ private:
     return false;
   }
 
-  / void publishSingleMachineMarker(
-        const std::string &machine_frame_id,
-        const geometry_msgs::msg::TransformStamped &transform_stamped) {
+  void publishSingleMachineMarker(
+      const std::string &machine_frame_id,
+      const geometry_msgs::msg::TransformStamped &transform_stamped) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "map";
     marker.header.stamp = this->now();
