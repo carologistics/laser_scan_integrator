@@ -34,7 +34,6 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <thread>
 #include <vector>
-#include <yaml-cpp/yaml.h>
 
 using namespace std::chrono_literals;
 
@@ -45,77 +44,77 @@ public:
         tf_buffer_(std::make_unique<tf2_ros::Buffer>(this->get_clock())),
         tf_listener_(
             std::make_shared<tf2_ros::TransformListener>(*tf_buffer_)) {
-    std::string share_dir =
-        ament_index_cpp::get_package_share_directory("laser_scan_mapper");
-    std::string yaml_file = share_dir + "/mapper_params.yaml";
-    RCLCPP_INFO(this->get_logger(), "Load machine names from YAML: %s",
-                yaml_file.c_str());
-
-    if (!loadMachineNamesFromYaml(yaml_file, machine_names_)) {
-      RCLCPP_ERROR(
-          this->get_logger(),
-          "Failed to load machine names from YAML: %s. Node will shut down.",
-          yaml_file.c_str());
+    // Load machine names from the ROS parameter "machine_names"
+    this->declare_parameter<std::vector<std::string>>(
+        "machine_names", std::vector<std::string>{});
+    machine_names_ = this->get_parameter("machine_names")
+                         .get_value<std::vector<std::string>>();
+    if (machine_names_.empty()) {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Parameter 'machine_names' is empty. Shutting down node.");
       rclcpp::shutdown();
       return;
     }
+    RCLCPP_INFO(this->get_logger(),
+                "%zu machine names loaded from ROS parameters.",
+                machine_names_.size());
 
-    // TF-Broadcaster initialisieren
+    this->declare_parameter<double>("position_tolerance", 0.3);
+    this->declare_parameter<double>("angle_tolerance", 0.5);
+    position_tolerance_ = this->get_parameter("position_tolerance").as_double();
+    angle_tolerance_ = this->get_parameter("angle_tolerance").as_double();
+    // Initialize the TF Broadcaster
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
-    // Marker-Publisher für segmentierte Linien (Topic: /mapped_segments)
+    // Create publisher for segmented line markers (topic: /mapped_segments)
     marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
         "mapped_segments", 10);
 
-    // Marker-Publisher für Maschinen-Rechtecke (Topic: /machine_markers)
+    // Create publisher for machine markers (topic: /machine_markers)
     machine_marker_pub_ =
         this->create_publisher<visualization_msgs::msg::Marker>(
             "machine_markers", 10);
 
-    // Erstelle Timer um statische TF zu finden
+    // Create timer to update static TFs
     transform_timer_ = this->create_wall_timer(
         1s, std::bind(&MapperNode::updateMachineTransforms, this));
 
-    // Subscriber für LineSegments
+    // Subscriber for LineSegments messages
     sub_segments_ =
         this->create_subscription<laser_scan_integrator_msg::msg::LineSegments>(
             "line_segments", 10,
             std::bind(&MapperNode::segmentsCallback, this,
                       std::placeholders::_1));
 
-    RCLCPP_INFO(this->get_logger(), "Mapper gestartet.");
+    RCLCPP_INFO(this->get_logger(), "Mapper started.");
 
     ns_ = removeLeadingSlash(this->get_namespace());
   }
 
 private:
+  // Constants for marker publishing
   const double machine_width_ = 0.35;
-  const double position_tolerance_ = 0.3;
-  const double angle_tolerance_ = 0.5;
   const double machine_length_ = 0.70;
   static int global_marker_id;
 
+  // Member variables
   rclcpp::TimerBase::SharedPtr transform_timer_;
-
   std::vector<std::string> machine_names_;
-
   std::map<std::string, geometry_msgs::msg::TransformStamped>
       machine_transforms_;
-
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
-
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
       machine_marker_pub_;
-
   rclcpp::Subscription<laser_scan_integrator_msg::msg::LineSegments>::SharedPtr
       sub_segments_;
-
   std::string ns_;
+  double position_tolerance_;
+  double angle_tolerance_;
 
+  // Remove a leading slash from the namespace if it exists
   std::string removeLeadingSlash(const std::string &ns) {
     if (!ns.empty() && ns.front() == '/') {
       return ns.substr(1);
@@ -123,31 +122,7 @@ private:
     return ns;
   }
 
-  bool loadMachineNamesFromYaml(const std::string &file_path,
-                                std::vector<std::string> &out_names) {
-    try {
-      YAML::Node config = YAML::LoadFile(file_path);
-      // Erwartete Struktur: mapper -> ros__parameters -> machine_names
-      if (config["mapper"] && config["mapper"]["ros__parameters"] &&
-          config["mapper"]["ros__parameters"]["machine_names"]) {
-        auto machine_node =
-            config["mapper"]["ros__parameters"]["machine_names"];
-        for (std::size_t i = 0; i < machine_node.size(); ++i) {
-          out_names.push_back(machine_node[i].as<std::string>());
-        }
-        RCLCPP_INFO(this->get_logger(), "%zu machine names loaded from YAML.",
-                    out_names.size());
-        return !out_names.empty();
-      } else {
-        RCLCPP_ERROR(this->get_logger(), "Invalid YAML structure in %s",
-                     file_path.c_str());
-      }
-    } catch (const YAML::Exception &e) {
-      RCLCPP_ERROR(this->get_logger(), "YAML Parse Error: %s", e.what());
-    }
-    return false;
-  }
-
+  // Publish a marker for a single machine based on its transform
   void publishSingleMachineMarker(
       const std::string &machine_frame_id,
       const geometry_msgs::msg::TransformStamped &transform_stamped) {
@@ -178,13 +153,14 @@ private:
     marker.lifetime = rclcpp::Duration(0, 0);
 
     machine_marker_pub_->publish(marker);
-    RCLCPP_INFO(this->get_logger(),
-                "Maschinenmarker für %s veröffentlicht: (%.3f, %.3f)",
-                machine_frame_id.c_str(),
-                transform_stamped.transform.translation.x,
-                transform_stamped.transform.translation.y);
+    // RCLCPP_INFO(this->get_logger(), "Published machine marker for %s: (%.3f,
+    // %.3f)",
+    //             machine_frame_id.c_str(),
+    //             transform_stamped.transform.translation.x,
+    //             transform_stamped.transform.translation.y);
   }
 
+  // Update the transforms for each machine and publish markers
   void updateMachineTransforms() {
     bool all_loaded = true;
     for (const auto &machine_frame_id : machine_names_) {
@@ -193,29 +169,29 @@ private:
         continue;
       }
       try {
-        RCLCPP_INFO(this->get_logger(), "Try to load trasform for %s ...",
-                    machine_frame_id.c_str());
+        // RCLCPP_INFO(this->get_logger(), "Attempting to load transform for
+        // %s...", machine_frame_id.c_str());
         auto transform_stamped = tf_buffer_->lookupTransform(
             "map", machine_frame_id, tf2::TimePointZero);
         machine_transforms_[machine_frame_id] = transform_stamped;
         publishSingleMachineMarker(machine_frame_id, transform_stamped);
-        RCLCPP_INFO(this->get_logger(),
-                    "Transformation for %s successfully loaded",
-                    machine_frame_id.c_str());
+        // RCLCPP_INFO(this->get_logger(), "Transform for %s successfully
+        // loaded", machine_frame_id.c_str());
       } catch (const tf2::TransformException &ex) {
-        RCLCPP_WARN(this->get_logger(),
-                    "Transformation for %s is yet not available %s",
-                    machine_frame_id.c_str(), ex.what());
+        // RCLCPP_WARN(this->get_logger(), "Transform for %s not yet available:
+        // %s",
+        //             machine_frame_id.c_str(), ex.what());
         all_loaded = false;
       }
     }
 
     if (all_loaded) {
-      RCLCPP_INFO(this->get_logger(), "All transformation are now available");
+      RCLCPP_INFO(this->get_logger(), "All transforms are now available");
       transform_timer_->cancel();
     }
   }
 
+  // Callback for processing LineSegments messages
   void segmentsCallback(
       const laser_scan_integrator_msg::msg::LineSegments::SharedPtr msg) {
     for (const auto &entry : machine_transforms_) {
@@ -225,9 +201,8 @@ private:
       for (size_t idx = 0; idx < msg->segments.size(); ++idx) {
         const auto &segment = msg->segments[idx];
 
-        // Transform segment endpoints into the map frame
-        geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_base, pt2_base,
-            pt1_map, pt2_map;
+        // Transform segment endpoints into the "map" frame
+        geometry_msgs::msg::PointStamped pt1_in, pt2_in, pt1_map, pt2_map;
         pt1_in.header.stamp = this->now();
         pt1_in.header.frame_id = segment.frame_id;
         pt1_in.point = segment.end_point1;
@@ -240,19 +215,18 @@ private:
               tf_buffer_->transform(pt1_in, "map", tf2::durationFromSec(1.0));
           pt2_map =
               tf_buffer_->transform(pt2_in, "map", tf2::durationFromSec(1.0));
-          RCLCPP_INFO(this->get_logger(), "pt1_map(1): x=%.3f, y=%.3f",
-                      pt1_map.point.x, pt1_map.point.y);
-          RCLCPP_INFO(this->get_logger(), "pt2_map(1): x=%.3f, y=%.3f",
-                      pt2_map.point.x, pt2_map.point.y);
+          // RCLCPP_INFO(this->get_logger(), "pt1_map: x=%.3f, y=%.3f",
+          // pt1_map.point.x, pt1_map.point.y); RCLCPP_INFO(this->get_logger(),
+          // "pt2_map: x=%.3f, y=%.3f", pt2_map.point.x, pt2_map.point.y);
         } catch (const tf2::TransformException &ex) {
-          // Transformation of segment center failed, skip this segment
-          RCLCPP_WARN(this->get_logger(),
-                      "Transformation von %s nach map fehlgeschlagen: %s",
-                      pt1_in.header.frame_id.c_str(), ex.what());
+          // RCLCPP_WARN(this->get_logger(), "Failed to transform from %s to
+          // map: %s",
+          //             pt1_in.header.frame_id.c_str(), ex.what());
           continue;
         }
 
-        // Calculate segment midpoint in map frame and direction vector
+        // Calculate the midpoint and direction vector of the segment in the map
+        // frame
         Eigen::Vector2d segment_origin_map(
             0.5 * (pt2_map.point.x + pt1_map.point.x),
             0.5 * (pt2_map.point.y + pt1_map.point.y));
@@ -264,7 +238,7 @@ private:
         Eigen::Vector2d line_cross = line_cross_3d.head<2>();
         double line_angle = std::atan2(line_cross.y(), line_cross.x());
 
-        // Create the segment transform in map frame
+        // Create the segment transform in the "map" frame
         geometry_msgs::msg::TransformStamped segment_transform;
         segment_transform.header.frame_id = "map";
         segment_transform.child_frame_id = "segment_frame"; // freely chosen
@@ -277,10 +251,10 @@ private:
         q.setRPY(0, 0, line_angle);
         segment_transform.transform.rotation = tf2::toMsg(q);
 
-        RCLCPP_INFO(this->get_logger(), "line: x=%.3f, y=%.3f", line.x(),
-                    line.y());
+        // RCLCPP_INFO(this->get_logger(), "line: x=%.3f, y=%.3f", line.x(),
+        // line.y());
 
-        // Convert both transforms to tf2::Transform
+        // Calculate the difference transform (segment relative to machine)
         tf2::Transform tf_machine(
             tf2::Quaternion(machine_transform.transform.rotation.x,
                             machine_transform.transform.rotation.y,
@@ -289,7 +263,6 @@ private:
             tf2::Vector3(machine_transform.transform.translation.x,
                          machine_transform.transform.translation.y,
                          machine_transform.transform.translation.z));
-
         tf2::Transform tf_segment(
             tf2::Quaternion(segment_transform.transform.rotation.x,
                             segment_transform.transform.rotation.y,
@@ -299,20 +272,14 @@ private:
                          segment_transform.transform.translation.y,
                          segment_transform.transform.translation.z));
 
-        // Compute the difference transform (segment relative to machine)
         tf2::Transform tf_diff = tf_machine.inverseTimes(tf_segment);
-
-        // Compute distance
         double dx = tf_diff.getOrigin().x();
         double dy = tf_diff.getOrigin().y();
         double dz = tf_diff.getOrigin().z();
         double distance = std::sqrt(dx * dx + dy * dy + dz * dz);
 
-        // Compute yaw difference
         double roll, pitch, yaw;
         tf2::Matrix3x3(tf_diff.getRotation()).getRPY(roll, pitch, yaw);
-
-        // Adjust yaw if it's approximately ±180°
         double adjusted_yaw = yaw;
         if (std::abs(std::abs(yaw) - M_PI) < angle_tolerance_) {
           adjusted_yaw = (yaw > 0) ? yaw - M_PI : yaw + M_PI;
@@ -321,17 +288,16 @@ private:
         // Reject segment if distance or angle exceed tolerances
         if (std::abs(distance) > position_tolerance_ ||
             std::abs(adjusted_yaw) > angle_tolerance_) {
-          RCLCPP_INFO(
-              this->get_logger(),
-              "Segment [%zu] rejected for %s: dist=%.3f, dtheta=%.3f \n --- \n",
-              idx, machine_frame_id.c_str(), distance, adjusted_yaw);
+          // RCLCPP_INFO(this->get_logger(), "Segment [%zu] for %s rejected:
+          // dist=%.3f, dtheta=%.3f",
+          //             idx, machine_frame_id.c_str(), distance, adjusted_yaw);
           continue;
         }
 
-        RCLCPP_INFO(this->get_logger(), "center_segment(2): x=%.3f, y=%.3f",
-                    segment_origin_map.x(), segment_origin_map.y());
+        // RCLCPP_INFO(this->get_logger(), "Segment center: x=%.3f, y=%.3f",
+        //             segment_origin_map.x(), segment_origin_map.y());
 
-        // Create corrected transform based on machine transform
+        // Create corrected transform based on the machine transform
         geometry_msgs::msg::TransformStamped corrected_transform =
             machine_transform;
         corrected_transform.transform.translation.x = segment_origin_map.x();
@@ -346,50 +312,39 @@ private:
         corrected_transform.child_frame_id =
             ns_ + "/" + machine_frame_id + "-CORRECTED";
         corrected_transform.header.stamp = this->now();
-        RCLCPP_INFO(this->get_logger(),
-                    "Corrected TF for %s (Segment[%zu]) published: x=%.3f, "
-                    "y=%.3f, yaw=%.3f \n --- \n",
-                    machine_frame_id.c_str(), idx,
-                    corrected_transform.transform.translation.x,
-                    corrected_transform.transform.translation.y, line_angle);
+        // RCLCPP_INFO(this->get_logger(), "Published corrected TF for %s
+        // (Segment[%zu]): x=%.3f, y=%.3f, yaw=%.3f", machine_frame_id.c_str(),
+        // idx, corrected_transform.transform.translation.x,
+        // corrected_transform.transform.translation.y, line_angle);
 
-        // Publish the corrected transform
         tf_broadcaster_->sendTransform(corrected_transform);
 
-        // Convert corrected_transform (geometry_msgs) to tf2::Transform
         tf2::Transform tf_corrected;
         tf2::fromMsg(corrected_transform.transform, tf_corrected);
 
-        // Create offset transform for "INPUTPUT-CORRECTED":
-        // 50 cm along positive x and 180° rotation around z.
+        // Create offset transformation for "INPUTPUT-CORRECTED" (50cm along +x
+        // and 180° rotation)
         tf2::Transform tf_offset_input;
         {
           tf2::Quaternion q_offset_input;
-          q_offset_input.setRPY(0, 0, M_PI); // 180° rotation around z
+          q_offset_input.setRPY(0, 0, M_PI);
           tf_offset_input.setRotation(q_offset_input);
-          tf_offset_input.setOrigin(
-              tf2::Vector3(0.5, 0.0, 0.0)); // +0.5 m along x
+          tf_offset_input.setOrigin(tf2::Vector3(0.5, 0.0, 0.0));
         }
 
-        // Create offset transform for "OUTPUT-CORRECTED":
-        // 50 cm along negative x with no additional rotation.
+        // Create offset transformation for "OUTPUT-CORRECTED" (50cm along -x)
         tf2::Transform tf_offset_output;
         {
           tf2::Quaternion q_offset_output;
-          q_offset_output.setRPY(0, 0, 0); // no rotation
+          q_offset_output.setRPY(0, 0, 0);
           tf_offset_output.setRotation(q_offset_output);
-          tf_offset_output.setOrigin(
-              tf2::Vector3(-0.5, 0.0, 0.0)); // -0.5 m along x
+          tf_offset_output.setOrigin(tf2::Vector3(-0.5, 0.0, 0.0));
         }
 
-        // Compute the new transforms relative to the corrected transform
         tf2::Transform tf_input = tf_corrected * tf_offset_input;
         tf2::Transform tf_output = tf_corrected * tf_offset_output;
 
-        // Create and publish the new geometry_msgs::msg::TransformStamped
-        // messages
-
-        // For "INPUTPUT-CORRECTED"
+        // Transformation for "INPUTPUT-CORRECTED"
         geometry_msgs::msg::TransformStamped input_transform =
             corrected_transform;
         input_transform.child_frame_id =
@@ -398,7 +353,7 @@ private:
         input_transform.header.stamp = this->now();
         tf_broadcaster_->sendTransform(input_transform);
 
-        // For "OUTPUT-CORRECTED"
+        // Transformation for "OUTPUT-CORRECTED"
         geometry_msgs::msg::TransformStamped output_transform =
             corrected_transform;
         output_transform.child_frame_id =
@@ -407,15 +362,15 @@ private:
         output_transform.header.stamp = this->now();
         tf_broadcaster_->sendTransform(output_transform);
 
-        // Create a marker for visualization
+        // Create a marker for visualization of the segment
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map";
         marker.header.stamp = this->now();
         marker.ns = "mapped_segments";
-        marker.id = global_marker_id++; // Unique ID per marker
+        marker.id = global_marker_id++;
         marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
         marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.scale.x = 0.02; // Line width
+        marker.scale.x = 0.02;
 
         // Marker color: red
         marker.color.r = 1.0f;
@@ -423,7 +378,6 @@ private:
         marker.color.b = 0.0f;
         marker.color.a = 1.0f;
 
-        // Marker persists indefinitely
         marker.lifetime = rclcpp::Duration(0, 0);
 
         marker.points.push_back(pt1_map.point);
@@ -434,7 +388,7 @@ private:
     }
   }
 
-  // Hilfsfunktion: Yaw aus Quaternion
+  // Helper function: Extract yaw from a quaternion
   double getYawFromQuaternion(const geometry_msgs::msg::Quaternion &q) const {
     tf2::Quaternion tf2_quat(q.x, q.y, q.z, q.w);
     tf2::Matrix3x3 m(tf2_quat);

@@ -87,7 +87,14 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                 respawn=True,
                 respawn_delay=2,
                 condition=IfCondition(LaunchConfiguration("start_mapper")),
-                parameters=[{"frameID": launch_configuration["namespace"]}],
+                parameters=[
+                    {
+                        "frameID": launch_configuration["namespace"],
+                        "position_tolerance": launch_configuration["position_tolerance"],
+                        "angle_tolerance": launch_configuration["angle_tolerance"],
+                        "machine_names": launch_configuration["machine_names"],
+                    }
+                ],
             ),
         ]
     )
@@ -145,7 +152,37 @@ def generate_launch_description():
     declare_rangeMax_argument = DeclareLaunchArgument("rangeMax", default_value="100.0", description="rangeMax")
 
     declare_start_mapper_argument = DeclareLaunchArgument(
-        "start_mapper", default_value="false", description='Setze auf "true", um die mapper Node zu starten'
+        "start_mapper", default_value="false", description='Set this value on "true", to start the mapper node'
+    )
+    declare_machine_names_argument = DeclareLaunchArgument(
+        "machine_names",
+        default_value=[
+            "M-DS",
+            "M-SS",
+            "M-BS",
+            "M-CS1",
+            "M-CS2",
+            "M-RS1",
+            "M-RS2",
+            "C-DS",
+            "C-BS",
+            "C-SS",
+            "C-RS1",
+            "C-RS2",
+            "C-CS1",
+            "C-CS2",
+        ],
+        description="List of machine frame IDs used by the mapper node to retrieve their static transforms (TFs).",
+    )
+    declare_position_tolerance_argument = DeclareLaunchArgument(
+        "position_tolerance",
+        default_value="0.3",
+        description="Maximum allowed distance (in meters) between a laser segment and a machine for association.",
+    )
+    declare_angle_tolerance_argument = DeclareLaunchArgument(
+        "angle_tolerance",
+        default_value="0.5",
+        description="Maximum allowed angular deviation (in radians) between a laser segment and a machine orientation.",
     )
 
     # Erstellen des LaunchDescription-Objekts und Hinzufügen der Aktionen
@@ -171,7 +208,9 @@ def generate_launch_description():
     ld.add_action(declare_rangeMin_argument)
     ld.add_action(declare_rangeMax_argument)
     ld.add_action(declare_start_mapper_argument)
-
+    ld.add_action(declare_machine_names_argument)
+    ld.add_action(declare_position_tolerance_argument)
+    ld.add_action(declare_angle_tolerance_argument)
     ld.add_action(OpaqueFunction(function=launch_nodes_withconfig))
 
     return ld
