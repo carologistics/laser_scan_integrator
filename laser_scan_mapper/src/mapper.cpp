@@ -77,7 +77,7 @@ public:
 
     // Create timer to update static TFs
     transform_timer_ = this->create_wall_timer(
-        1s, std::bind(&MapperNode::updateMachineTransforms, this));
+        10s, std::bind(&MapperNode::updateMachineTransforms, this));
 
     // Subscriber for LineSegments messages
     sub_segments_ =
@@ -217,7 +217,7 @@ private:
               tf_buffer_->transform(pt2_in, "map", tf2::durationFromSec(1.0));
           // RCLCPP_INFO(this->get_logger(), "pt1_map: x=%.3f, y=%.3f",
           // pt1_map.point.x, pt1_map.point.y); RCLCPP_INFO(this->get_logger(),
-          // "pt2_map: x=%.3f, y=%.3f", pt2_map.point.x, pt2_map.point.y);
+          //"pt2_map: x=%.3f, y=%.3f", pt2_map.point.x, pt2_map.point.y);
         } catch (const tf2::TransformException &ex) {
           // RCLCPP_WARN(this->get_logger(), "Failed to transform from %s to
           // map: %s",
@@ -288,14 +288,15 @@ private:
         // Reject segment if distance or angle exceed tolerances
         if (std::abs(distance) > position_tolerance_ ||
             std::abs(adjusted_yaw) > angle_tolerance_) {
-          // RCLCPP_INFO(this->get_logger(), "Segment [%zu] for %s rejected:
-          // dist=%.3f, dtheta=%.3f",
-          //             idx, machine_frame_id.c_str(), distance, adjusted_yaw);
+          //   RCLCPP_INFO(this->get_logger(),
+          //    "Segment [%zu] for %s rejected:\n"
+          //    "dist=%.3f, dtheta=%.3f",
+          //    idx, machine_frame_id.c_str(), distance, adjusted_yaw);
           continue;
         }
 
-        // RCLCPP_INFO(this->get_logger(), "Segment center: x=%.3f, y=%.3f",
-        //             segment_origin_map.x(), segment_origin_map.y());
+        RCLCPP_INFO(this->get_logger(), "Segment center: x=%.3f, y=%.3f",
+                    segment_origin_map.x(), segment_origin_map.y());
 
         // Create corrected transform based on the machine transform
         geometry_msgs::msg::TransformStamped corrected_transform =
