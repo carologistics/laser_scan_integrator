@@ -211,10 +211,8 @@ private:
 
         pt2_in.header = pt1_in.header;
         pt2_in.point = segment.end_point2;
-        if (&machine_frame_id.endsends_with("-I") ||
-            &machine_frame_id.ends_with("-O")) {
-          bool aruco_tag = true;
-        }
+        bool aruco_tag = machine_frame_id.ends_with("-I") ||
+                         machine_frame_id.ends_with("-O");
 
         try {
           pt1_map =
@@ -397,8 +395,8 @@ private:
         } else {
 
           try {
-            auto transform_stamped = tf_buffer_->lookupTransform(
-                "map", ns_ + "/base_link", tf2::TimePointZero);
+            auto tf1 = tf_buffer_->lookupTransform("map", ns_ + "/base_link",
+                                                   tf2::TimePointZero);
           } catch (const tf2::TransformException &ex) {
             // RCLCPP_WARN(this->get_logger(), "Transform for %s not yet
             // available: %s",
@@ -413,9 +411,9 @@ private:
           geometry_msgs::msg::TransformStamped corrected_transform =
               machine_transform;
           corrected_transform.transform.translation.x =
-              machine_transform.transform.translation.x,
+              machine_transform.transform.translation.x;
           corrected_transform.transform.translation.y =
-              machine_transform.transform.translation.y,
+              machine_transform.transform.translation.y;
           tf2::Quaternion corrected_q;
           // Check if aruco tf y-axis looks away from machine center
           corrected_q.setRPY(
