@@ -216,8 +216,8 @@ private:
 
         pt2_in.header = pt1_in.header;
         pt2_in.point = segment.end_point2;
-        bool aruco_tag = machine_frame_id.ends_with("-I") ||
-                         machine_frame_id.ends_with("-O");
+        bool aruco_tag = ends_with(machine_frame_id, "-I") ||
+                         ends_with(machine_frame_id, "-O");
 
         try {
           pt1_map =
