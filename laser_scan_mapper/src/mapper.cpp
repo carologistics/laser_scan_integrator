@@ -35,6 +35,11 @@
 #include <thread>
 #include <vector>
 
+inline bool ends_with(const std::string &str, const std::string &suffix) {
+  return str.size() >= suffix.size() &&
+         str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
 using namespace std::chrono_literals;
 
 class MapperNode : public rclcpp::Node {
@@ -393,7 +398,7 @@ private:
 
           marker_pub_->publish(marker);
         } else {
-
+          geometry_msgs::msg::TransformStamped tf1;
           try {
             auto tf1 = tf_buffer_->lookupTransform("map", ns_ + "/base_link",
                                                    tf2::TimePointZero);
