@@ -7,10 +7,11 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1/Frames1
+        - /Marker1
         - /Marker1/Topic1
         - /Marker2
         - /Marker2/Topic1
-      Splitter Ratio: 0.7823529243469238
+      Splitter Ratio: 0.5354838967323303
     Tree Height: 707
   - Class: rviz_common/Selection
     Name: Selection
@@ -58,17 +59,333 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        C-BS:
+          Value: true
+        C-BS-INPUT:
+          Value: true
+        C-BS-OUTPUT:
+          Value: true
+        C-CS1:
+          Value: true
+        C-CS1-INPUT:
+          Value: true
+        C-CS1-OUTPUT:
+          Value: true
+        C-CS2:
+          Value: true
+        C-CS2-INPUT:
+          Value: true
+        C-CS2-OUTPUT:
+          Value: true
+        C-DS:
+          Value: true
+        C-DS-INPUT:
+          Value: true
+        C-DS-OUTPUT:
+          Value: true
+        C-RS1:
+          Value: true
+        C-RS1-INPUT:
+          Value: true
+        C-RS1-OUTPUT:
+          Value: true
+        C-RS2:
+          Value: true
+        C-RS2-INPUT:
+          Value: true
+        C-RS2-OUTPUT:
+          Value: true
+        C-SS:
+          Value: true
+        C-SS-INPUT:
+          Value: true
+        C-SS-OUTPUT:
+          Value: true
+        M-BS:
+          Value: true
+        M-BS-INPUT:
+          Value: true
+        M-BS-OUTPUT:
+          Value: true
+        M-CS1:
+          Value: true
+        M-CS1-INPUT:
+          Value: true
+        M-CS1-OUTPUT:
+          Value: true
+        M-CS2:
+          Value: true
+        M-CS2-INPUT:
+          Value: true
+        M-CS2-OUTPUT:
+          Value: true
+        M-DS:
+          Value: true
+        M-DS-INPUT:
+          Value: true
+        M-DS-OUTPUT:
+          Value: true
+        M-RS1:
+          Value: true
+        M-RS1-INPUT:
+          Value: true
+        M-RS1-OUTPUT:
+          Value: true
+        M-RS2:
+          Value: true
+        M-RS2-INPUT:
+          Value: true
+        M-RS2-OUTPUT:
+          Value: true
+        M-SS:
+          Value: true
+        M-SS-INPUT:
+          Value: true
+        M-SS-OUTPUT:
+          Value: true
+        WAIT-C-BS-INPUT:
+          Value: true
+        WAIT-C-BS-OUTPUT:
+          Value: true
+        WAIT-C-CS1-INPUT:
+          Value: true
+        WAIT-C-CS1-OUTPUT:
+          Value: true
+        WAIT-C-CS2-INPUT:
+          Value: true
+        WAIT-C-CS2-OUTPUT:
+          Value: true
+        WAIT-C-DS-INPUT:
+          Value: true
+        WAIT-C-DS-OUTPUT:
+          Value: true
+        WAIT-C-RS1-INPUT:
+          Value: true
+        WAIT-C-RS1-OUTPUT:
+          Value: true
+        WAIT-C-RS2-INPUT:
+          Value: true
+        WAIT-C-RS2-OUTPUT:
+          Value: true
+        WAIT-C-SS-INPUT:
+          Value: true
+        WAIT-C-SS-OUTPUT:
+          Value: true
+        WAIT-M-BS-INPUT:
+          Value: true
+        WAIT-M-BS-OUTPUT:
+          Value: true
+        WAIT-M-CS1-INPUT:
+          Value: true
+        WAIT-M-CS1-OUTPUT:
+          Value: true
+        WAIT-M-CS2-INPUT:
+          Value: true
+        WAIT-M-CS2-OUTPUT:
+          Value: true
+        WAIT-M-DS-INPUT:
+          Value: true
+        WAIT-M-DS-OUTPUT:
+          Value: true
+        WAIT-M-RS1-INPUT:
+          Value: true
+        WAIT-M-RS1-OUTPUT:
+          Value: true
+        WAIT-M-RS2-INPUT:
+          Value: true
+        WAIT-M-RS2-OUTPUT:
+          Value: true
+        WAIT-M-SS-INPUT:
+          Value: true
+        WAIT-M-SS-OUTPUT:
+          Value: true
+        WAIT1:
+          Value: true
+        WAIT2:
+          Value: true
+        WAIT3:
+          Value: true
+        WAIT4:
+          Value: true
+        map:
+          Value: true
+        robotinobase4/base_link:
+          Value: true
+        robotinobase4/odom:
+          Value: true
+        robotinobase4/wheel0_link:
+          Value: true
+        robotinobase4/wheel1_link:
+          Value: true
+        robotinobase4/wheel2_link:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        map:
+          C-BS:
+            {}
+          C-BS-INPUT:
+            {}
+          C-BS-OUTPUT:
+            {}
+          C-CS1:
+            {}
+          C-CS1-INPUT:
+            {}
+          C-CS1-OUTPUT:
+            {}
+          C-CS2:
+            {}
+          C-CS2-INPUT:
+            {}
+          C-CS2-OUTPUT:
+            {}
+          C-DS:
+            {}
+          C-DS-INPUT:
+            {}
+          C-DS-OUTPUT:
+            {}
+          C-RS1:
+            {}
+          C-RS1-INPUT:
+            {}
+          C-RS1-OUTPUT:
+            {}
+          C-RS2:
+            {}
+          C-RS2-INPUT:
+            {}
+          C-RS2-OUTPUT:
+            {}
+          C-SS:
+            {}
+          C-SS-INPUT:
+            {}
+          C-SS-OUTPUT:
+            {}
+          M-BS:
+            {}
+          M-BS-INPUT:
+            {}
+          M-BS-OUTPUT:
+            {}
+          M-CS1:
+            {}
+          M-CS1-INPUT:
+            {}
+          M-CS1-OUTPUT:
+            {}
+          M-CS2:
+            {}
+          M-CS2-INPUT:
+            {}
+          M-CS2-OUTPUT:
+            {}
+          M-DS:
+            {}
+          M-DS-INPUT:
+            {}
+          M-DS-OUTPUT:
+            {}
+          M-RS1:
+            {}
+          M-RS1-INPUT:
+            {}
+          M-RS1-OUTPUT:
+            {}
+          M-RS2:
+            {}
+          M-RS2-INPUT:
+            {}
+          M-RS2-OUTPUT:
+            {}
+          M-SS:
+            {}
+          M-SS-INPUT:
+            {}
+          M-SS-OUTPUT:
+            {}
+          WAIT-C-BS-INPUT:
+            {}
+          WAIT-C-BS-OUTPUT:
+            {}
+          WAIT-C-CS1-INPUT:
+            {}
+          WAIT-C-CS1-OUTPUT:
+            {}
+          WAIT-C-CS2-INPUT:
+            {}
+          WAIT-C-CS2-OUTPUT:
+            {}
+          WAIT-C-DS-INPUT:
+            {}
+          WAIT-C-DS-OUTPUT:
+            {}
+          WAIT-C-RS1-INPUT:
+            {}
+          WAIT-C-RS1-OUTPUT:
+            {}
+          WAIT-C-RS2-INPUT:
+            {}
+          WAIT-C-RS2-OUTPUT:
+            {}
+          WAIT-C-SS-INPUT:
+            {}
+          WAIT-C-SS-OUTPUT:
+            {}
+          WAIT-M-BS-INPUT:
+            {}
+          WAIT-M-BS-OUTPUT:
+            {}
+          WAIT-M-CS1-INPUT:
+            {}
+          WAIT-M-CS1-OUTPUT:
+            {}
+          WAIT-M-CS2-INPUT:
+            {}
+          WAIT-M-CS2-OUTPUT:
+            {}
+          WAIT-M-DS-INPUT:
+            {}
+          WAIT-M-DS-OUTPUT:
+            {}
+          WAIT-M-RS1-INPUT:
+            {}
+          WAIT-M-RS1-OUTPUT:
+            {}
+          WAIT-M-RS2-INPUT:
+            {}
+          WAIT-M-RS2-OUTPUT:
+            {}
+          WAIT-M-SS-INPUT:
+            {}
+          WAIT-M-SS-OUTPUT:
+            {}
+          WAIT1:
+            {}
+          WAIT2:
+            {}
+          WAIT3:
+            {}
+          WAIT4:
+            {}
+          robotinobase4/odom:
+            robotinobase4/base_link:
+              robotinobase4/wheel0_link:
+                {}
+              robotinobase4/wheel1_link:
+                {}
+              robotinobase4/wheel2_link:
+                {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Marker
-      Enabled: false
+      Enabled: true
       Name: Marker
       Namespaces:
         {}
@@ -78,8 +395,8 @@ Visualization Manager:
         Filter size: 23
         History Policy: Keep All
         Reliability Policy: Best Effort
-        Value: /machine_markers
-      Value: false
+        Value: /robotinobase4/mapped_segments
+      Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Marker
@@ -165,7 +482,7 @@ Window Geometry:
   Height: 1011
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000015600000351fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003f00000351000000cc00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003f00000351000000a900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073e0000003efc0100000002fb0000000800540069006d006501000000000000073e0000026f00fffffffb0000000800540069006d00650100000000000004500000000000000000000005e20000035100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001d300000351fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003f00000351000000cc00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003f00000351000000a900fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e100000197000000030000073e0000003efc0100000002fb0000000800540069006d006501000000000000073e0000026f00fffffffb0000000800540069006d00650100000000000004500000000000000000000005650000035100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
