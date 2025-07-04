@@ -54,14 +54,14 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                 executable="laser_scan_integrator",
                 parameters=[
                     {
-                        "integratedTopic": "/" + launch_configuration["namespace"] + "/scan",
-                        "integratedFrameId": launch_configuration["namespace"] + "/laser_link",
-                        "scanTopic1": "/" + launch_configuration["namespace"] + launch_configuration["scanTopic1"],
+                        "integratedTopic": "/scan",
+                        "integratedFrameId": "/laser_link",
+                        "scanTopic1": launch_configuration["scanTopic1"],
                         "laser1XOff": laser1XOff,
                         "laser1YOff": laser1YOff,
                         "laser1Alpha": laser1Alpha,
                         "show1": show1,
-                        "scanTopic2": "/" + launch_configuration["namespace"] + launch_configuration["scanTopic2"],
+                        "scanTopic2": launch_configuration["scanTopic2"],
                         "laser2XOff": laser2XOff,
                         "laser2YOff": laser2YOff,
                         "laser2Alpha": laser2Alpha,
@@ -74,7 +74,6 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                         "rangeMax": rangeMax,
                     }
                 ],
-                namespace=namespace,
                 output="screen",
                 respawn=True,
                 respawn_delay=2,
@@ -82,7 +81,6 @@ def launch_nodes_withconfig(context, *args, **kwargs):
             Node(
                 package="laser_scan_mapper",
                 executable="mapper",
-                namespace=namespace,
                 output="screen",
                 respawn=True,
                 respawn_delay=2,
