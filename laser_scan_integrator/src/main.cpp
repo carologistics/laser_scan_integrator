@@ -353,12 +353,12 @@ private:
       seg.setSamplesMaxDist(segm_sample_max_dist, search);
       seg.setInputCloud(in_cloud);
       seg.segment(*inliers, *coeff);
-      RCLCPP_INFO(this->get_logger(),
-                  "Inliers (Anzahl: %zu):", inliers->indices.size());
-      for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
-        RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i,
-                    inliers->indices[i]);
-      }
+      // RCLCPP_INFO(this->get_logger(),
+      //             "Inliers (Anzahl: %zu):", inliers->indices.size());
+      // for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
+      //   RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i,
+      //               inliers->indices[i]);
+      // }
       if (inliers->indices.size() == 0) {
         // no line found
         break;
@@ -415,12 +415,12 @@ private:
         pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
         segc.segment(*tmp_index, *coeff);
         *line_cluster_index = *tmp_index;
-        RCLCPP_INFO(this->get_logger(),
-                    "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
-        for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
-          RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i,
-                      tmp_index->indices[i]);
-        }
+        // RCLCPP_INFO(this->get_logger(),
+        //             "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
+        // for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
+        //   RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i,
+        //               tmp_index->indices[i]);
+        // }
       }
 
       // Remove the linear or clustered inliers, extract the rest
