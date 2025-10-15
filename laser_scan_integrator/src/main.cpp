@@ -32,6 +32,8 @@
 #include "laser_scan_integrator_msg/msg/line_segments.hpp"
 #include "laser_scan_integrator_msg/srv/toggle_segmentation.hpp"
 
+#include <pcl/filters/voxel_grid.h>
+
 // #include <pcl/point_cloud.h>
 // #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
@@ -228,6 +230,11 @@ private:
     // Process the point cloud until fewer than 3 points remain (minimum for a
     // line)
     while (cloud_copy->size() > 2) {
+      RCLCPP_INFO(this->get_logger(), "cas 1.");
+      pcl::VoxelGrid<pcl::PointXYZ> vg;
+      vg.setInputCloud(cloud_copy);
+      vg.setLeafSize(0.01f, 0.01f, 0.01f);
+      vg.filter(*cloud_copy);
       seg.setInputCloud(cloud_copy);
       seg.segment(*inliers, *coefficients);
 
@@ -351,6 +358,11 @@ private:
       seg.setMaxIterations(segm_max_iterations);
       seg.setDistanceThreshold(segm_distance_threshold);
       seg.setSamplesMaxDist(segm_sample_max_dist, search);
+      RCLCPP_INFO(this->get_logger(), "cas 2.");
+      pcl::VoxelGrid<pcl::PointXYZ> vg;
+      vg.setInputCloud(in_cloud);
+      vg.setLeafSize(0.005f, 0.005f, 0.005f);  // 5mm resolution
+      vg.filter(*in_cloud);
       seg.setInputCloud(in_cloud);
       seg.segment(*inliers, *coeff);
       // RCLCPP_INFO(this->get_logger(),
