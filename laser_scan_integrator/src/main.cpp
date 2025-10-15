@@ -342,6 +342,27 @@ private:
 
     std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
 
+
+      RCLCPP_INFO(this->get_logger(), "cas 2.");
+      pcl::VoxelGrid<pcl::PointXYZ> vg;
+      vg.setInputCloud(in_cloud);
+      vg.setLeafSize(0.005f, 0.005f, 0.005f);  // 5mm resolution
+      vg.filter(*in_cloud);
+      pcl::PointCloud<pcl::PointXYZ>::Ptr deduped(new pcl::PointCloud<pcl::PointXYZ>());
+deduped->reserve(in_cloud->size());
+for (const auto &p : in_cloud->points) {
+  if (deduped->empty()) {
+    deduped->push_back(p);
+  } else {
+    const auto &last = deduped->back();
+    float dx = p.x - last.x;
+    float dy = p.y - last.y;
+    float dz = p.z - last.z;
+    if (dx * dx + dy * dy + dz * dz > 1e-6f)  // > 1 mm²
+      deduped->push_back(p);
+  }
+}
+
     while (in_cloud->points.size() > segm_min_inliers) {
       // Segment the largest linear component from the remaining cloud
       // logger->log_info(name(), "[L %u] %zu points left",
@@ -349,7 +370,7 @@ private:
 
       typename pcl::search::KdTree<pcl::PointXYZ>::Ptr search(
           new pcl::search::KdTree<pcl::PointXYZ>);
-      search->setInputCloud(in_cloud);
+      search->setInputCloud(deduped);
 
       pcl::SACSegmentation<pcl::PointXYZ> seg;
       seg.setOptimizeCoefficients(true);
@@ -358,12 +379,7 @@ private:
       seg.setMaxIterations(segm_max_iterations);
       seg.setDistanceThreshold(segm_distance_threshold);
       seg.setSamplesMaxDist(segm_sample_max_dist, search);
-      RCLCPP_INFO(this->get_logger(), "cas 2.");
-      pcl::VoxelGrid<pcl::PointXYZ> vg;
-      vg.setInputCloud(in_cloud);
-      vg.setLeafSize(0.005f, 0.005f, 0.005f);  // 5mm resolution
-      vg.filter(*in_cloud);
-      seg.setInputCloud(in_cloud);
+      seg.setInputCloud(deduped);
       seg.segment(*inliers, *coeff);
       // RCLCPP_INFO(this->get_logger(),
       //             "Inliers (Anzahl: %zu):", inliers->indices.size());
@@ -395,7 +411,7 @@ private:
           new pcl::search::KdTree<pcl::PointXYZ>());
       typename pcl::search::KdTree<pcl::PointXYZ>::IndicesConstPtr
           search_indices(new std::vector<int>(inliers->indices));
-      kdtree_line_cluster->setInputCloud(in_cloud, search_indices);
+      kdtree_line_cluster->setInputCloud(deduped, search_indices);
 
       std::vector<pcl::PointIndices> line_cluster_indices;
       pcl::EuclideanClusterExtraction<pcl::PointXYZ> line_ec;
@@ -404,7 +420,7 @@ private:
       line_ec.setMinClusterSize(min_size);
       line_ec.setMaxClusterSize(inliers->indices.size());
       line_ec.setSearchMethod(kdtree_line_cluster);
-      line_ec.setInputCloud(in_cloud);
+      line_ec.setInputCloud(deduped);
       line_ec.setIndices(inliers);
       line_ec.extract(line_cluster_indices);
 
@@ -422,7 +438,7 @@ private:
         segc.setMethodType(pcl::SAC_RANSAC);
         segc.setMaxIterations(segm_max_iterations);
         segc.setDistanceThreshold(segm_distance_threshold);
-        segc.setInputCloud(in_cloud);
+        segc.setInputCloud(deduped);
         segc.setIndices(line_cluster_index);
         pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
         segc.segment(*tmp_index, *coeff);
@@ -441,7 +457,7 @@ private:
       typename pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_line(
           new pcl::PointCloud<pcl::PointXYZ>());
       pcl::ExtractIndices<pcl::PointXYZ> extract;
-      extract.setInputCloud(in_cloud);
+      extract.setInputCloud(deduped);
       extract.setIndices(
           (line_cluster_index && !line_cluster_index->indices.empty())
               ? line_cluster_index
@@ -451,7 +467,7 @@ private:
 
       extract.setNegative(true);
       extract.filter(*cloud_f);
-      *in_cloud = *cloud_f;
+      *deduped = *cloud_f;
 
       if (!line_cluster_index || line_cluster_index->indices.empty()) {
         continue;
@@ -519,7 +535,7 @@ private:
     }
 
     if (remaining_cloud) {
-      *remaining_cloud = *in_cloud;
+      *remaining_cloud = *deduped;
     }
 
     return detected_lines;
