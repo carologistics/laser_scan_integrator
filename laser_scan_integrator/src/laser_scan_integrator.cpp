@@ -19,8 +19,12 @@
 //
 
 #include "laser_scan_integrator/laser_scan_integrator.hpp"
+#include <pcl/console/print.h>
 
 scanMerger::scanMerger() : Node("laser_scan_integrator"), last_call_time_(now()) {
+    // Suppress PCL warnings about identical sample points
+    pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
+    
     tolerance_ = this->declare_parameter("transform_tolerance", 0.01);
 
     initialize_params();
@@ -153,28 +157,21 @@ scanMerger::calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
 
     std::vector<laser_scan_integrator_msg::msg::LineSegment> detected_lines;
 
-    RCLCPP_INFO(this->get_logger(), "cas 2.");
-    pcl::VoxelGrid<pcl::PointXYZ> vg;
-    vg.setInputCloud(in_cloud);
-    vg.setLeafSize(0.005f, 0.005f, 0.005f); // 5mm resolution
-    vg.filter(*in_cloud);
+    // Apply VoxelGrid filter to reduce point density and remove duplicates
     pcl::PointCloud<pcl::PointXYZ>::Ptr deduped(
         new pcl::PointCloud<pcl::PointXYZ>());
-    deduped->reserve(in_cloud->size());
-    for (const auto &p : in_cloud->points) {
-        if (deduped->empty()) {
-            deduped->push_back(p);
-        } else {
-            const auto &last = deduped->back();
-            float dx = p.x - last.x;
-            float dy = p.y - last.y;
-            float dz = p.z - last.z;
-            if (dx * dx + dy * dy + dz * dz > 1e-6f) // > 1 mm²
-                deduped->push_back(p);
-        }
+    pcl::VoxelGrid<pcl::PointXYZ> vg;
+    vg.setInputCloud(in_cloud);
+    vg.setLeafSize(0.01f, 0.01f, 0.01f); // 1cm resolution - increased from 5mm to avoid too many duplicates
+    vg.filter(*deduped);
+    
+    // Check if we have enough points after filtering
+    if (deduped->points.size() < segm_min_inliers) {
+        RCLCPP_WARN(this->get_logger(), "Not enough points after filtering: %zu", deduped->points.size());
+        return detected_lines;
     }
 
-    while (in_cloud->points.size() > segm_min_inliers) {
+    while (deduped->points.size() > segm_min_inliers) {
         // Segment the largest linear component from the remaining cloud
         // logger->log_info(name(), "[L %u] %zu points left",
         //		     loop_count_, in_cloud->points.size());
