@@ -162,20 +162,26 @@ scanMerger::calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
         new pcl::PointCloud<pcl::PointXYZ>());
     pcl::VoxelGrid<pcl::PointXYZ> vg;
     vg.setInputCloud(in_cloud);
-    vg.setLeafSize(0.01f, 0.01f, 0.01f); // 1cm resolution - increased from 5mm to avoid too many duplicates
+    vg.setLeafSize(0.02f, 0.02f, 0.02f); // 2cm resolution - more aggressive filtering
     vg.filter(*deduped);
     
     // Check if we have enough points after filtering
     if (deduped->points.size() < segm_min_inliers) {
-        RCLCPP_WARN(this->get_logger(), "Not enough points after filtering: %zu", deduped->points.size());
         return detected_lines;
+    }
+    
+    // Additional check: ensure point cloud has sufficient spatial variance
+    // This prevents RANSAC from trying to fit lines to clustered identical points
+    if (deduped->points.size() >= 2) {
+        Eigen::Vector4f min_pt, max_pt;
+        pcl::getMinMax3D(*deduped, min_pt, max_pt);
+        float extent = (max_pt - min_pt).norm();
+        if (extent < 0.05f) { // If all points are within 5cm cube, skip
+            return detected_lines;
+        }
     }
 
     while (deduped->points.size() > segm_min_inliers) {
-        // Segment the largest linear component from the remaining cloud
-        // logger->log_info(name(), "[L %u] %zu points left",
-        //		     loop_count_, in_cloud->points.size());
-
         typename pcl::search::KdTree<pcl::PointXYZ>::Ptr search(
             new pcl::search::KdTree<pcl::PointXYZ>);
         search->setInputCloud(deduped);
@@ -187,6 +193,7 @@ scanMerger::calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
         seg.setMaxIterations(segm_max_iterations);
         seg.setDistanceThreshold(segm_distance_threshold);
         seg.setSamplesMaxDist(segm_sample_max_dist, search);
+        seg.setProbability(0.99); // Set probability to help RANSAC converge faster
         seg.setInputCloud(deduped);
         seg.segment(*inliers, *coeff);
         // RCLCPP_INFO(this->get_logger(),
@@ -404,7 +411,6 @@ void scanMerger::publishLineMarkers(
 }
 
 void scanMerger::update_point_cloud_rgb() {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr refresh_params();
     trans1_ = tf2_->lookupTransform(
         integratedFrameId_, laser1_->header.frame_id, rclcpp::Time(0));
     trans2_ = tf2_->lookupTransform(

@@ -39,6 +39,7 @@
 #include <pcl/ModelCoefficients.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/common/centroid.h>
+#include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/conditional_removal.h>
