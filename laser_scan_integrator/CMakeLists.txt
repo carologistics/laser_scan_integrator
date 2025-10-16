@@ -41,7 +41,7 @@ include_directories(
 )
 
 # Executable
-add_executable(laser_scan_integrator src/main.cpp)
+add_executable(laser_scan_integrator src/laser_scan_integrator.cpp)
 ament_target_dependencies(laser_scan_integrator
   rclcpp
   std_msgs
@@ -75,6 +75,12 @@ install(DIRECTORY
 install(DIRECTORY
   rviz
   DESTINATION share/${PROJECT_NAME}
+)
+
+# Install header files
+install(DIRECTORY
+  include/
+  DESTINATION include
 )
 
 # Install executable
