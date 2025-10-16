@@ -575,7 +575,7 @@ void scanMerger::update_point_cloud_rgb() {
     laser_scan_pub_->publish(*integrated_msg_);
     auto now = this->now();
     if (segmentation_enabled_) {
-        if ((now - last_call_time_).seconds() > 1.0) {
+        if ((now - last_call_time_).seconds() > 0.1) {
             last_call_time_ = now;
         } else {
             return;
