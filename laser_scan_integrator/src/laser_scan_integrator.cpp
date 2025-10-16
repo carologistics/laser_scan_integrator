@@ -23,7 +23,7 @@
 
 scanMerger::scanMerger() : Node("laser_scan_integrator"), last_call_time_(now()) {
     // Suppress ALL PCL console warnings (including SampleConsensusModelLine warnings)
-    pcl::console::setVerbosityLevel(pcl::console:::L_ERROR);
+    pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
     
     tolerance_ = this->declare_parameter("transform_tolerance", 0.01);
 
