@@ -187,15 +187,35 @@ scanMerger::calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
         search->setInputCloud(deduped);
 
         pcl::SACSegmentation<pcl::PointXYZ> seg;
-        seg.setOptimizeCoefficients(true);
+        seg.setOptimizeCoefficients(false); // Disable auto-optimization to avoid warnings
         seg.setModelType(pcl::SACMODEL_LINE);
         seg.setMethodType(pcl::SAC_RANSAC);
         seg.setMaxIterations(segm_max_iterations);
         seg.setDistanceThreshold(segm_distance_threshold);
         seg.setSamplesMaxDist(segm_sample_max_dist, search);
-        seg.setProbability(0.99); // Set probability to help RANSAC converge faster
+        seg.setProbability(0.99);
         seg.setInputCloud(deduped);
         seg.segment(*inliers, *coeff);
+        
+        if (inliers->indices.size() == 0) {
+            // no line found
+            break;
+        }
+        
+        // Manually optimize coefficients only if we have enough inliers (>4 for lines)
+        if (inliers->indices.size() > 4) {
+            pcl::SampleConsensusModel<pcl::PointXYZ>::Ptr model = seg.getModel();
+            Eigen::VectorXf coeff_refined;
+            Eigen::Vector4f coeff_raw(coeff->values.data());
+            model->optimizeModelCoefficients(inliers->indices, coeff_raw, coeff_refined);
+            coeff->values.resize(coeff_refined.size());
+            memcpy(&coeff->values[0], &coeff_refined[0], 
+                   coeff_refined.size() * sizeof(float));
+            // Refine inliers based on optimized coefficients
+            model->selectWithinDistance(coeff_refined, segm_distance_threshold, 
+                                       inliers->indices);
+        }
+        
         // RCLCPP_INFO(this->get_logger(),
         //             "Inliers (Anzahl: %zu):", inliers->indices.size());
         // for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
@@ -204,7 +224,7 @@ scanMerger::calc_lines(typename pcl::PointCloud<pcl::PointXYZ>::ConstPtr input,
         //               inliers->indices[i]);
         // }
         if (inliers->indices.size() == 0) {
-            // no line found
+            // no line found after refinement
             break;
         }
 
