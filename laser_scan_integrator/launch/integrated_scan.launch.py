@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2025 Carologistics
+# Copyright (c) 2025-2026 Carologistics
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,13 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
+
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
+from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def launch_nodes_withconfig(context, *args, **kwargs):
@@ -42,8 +47,11 @@ def launch_nodes_withconfig(context, *args, **kwargs):
 
     rangeMin = LaunchConfiguration("rangeMin")
     rangeMax = LaunchConfiguration("rangeMax")
-
+    start_mapper = LaunchConfiguration("start_mapper")
     launch_configuration = {}
+
+    config_file = os.path.join(get_package_share_directory("laser_scan_mapper"), "config", "offset.yaml")
+
     for argname, argval in context.launch_configurations.items():
         launch_configuration[argname] = argval
 
@@ -86,14 +94,21 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                 output="screen",
                 respawn=True,
                 respawn_delay=2,
-                condition=IfCondition(LaunchConfiguration("start_mapper")),
+                condition=IfCondition(start_mapper),
                 parameters=[
+                    config_file,
                     {
                         "frameID": launch_configuration["namespace"],
-                        "position_tolerance": launch_configuration["position_tolerance"],
-                        "angle_tolerance": launch_configuration["angle_tolerance"],
-                        "machine_names": launch_configuration["machine_names"],
-                    }
+                        "position_tolerance": ParameterValue(
+                            LaunchConfiguration("position_tolerance"), value_type=float
+                        ),
+                        "angle_tolerance": ParameterValue(LaunchConfiguration("angle_tolerance"), value_type=float),
+                    },
+                ],
+                arguments=[
+                    "--ros-args",
+                    "-p",
+                    LaunchConfiguration("machine_names"),
                 ],
             ),
         ]
@@ -108,11 +123,11 @@ def generate_launch_description():
     )
     declare_integratedtopic_argument = DeclareLaunchArgument(
         "integratedTopic",
-        default_value="/robotinobase1/scan",
+        default_value="",
         description="Integrated topic to publish the laserscan to",
     )
     declare_integratedframe_argument = DeclareLaunchArgument(
-        "integratedFrameId", default_value="robotinobase1/laser_link", description="Integrated Frame ID"
+        "integratedFrameId", default_value="", description="Integrated Frame ID"
     )
     declare_scantopic1_argument = DeclareLaunchArgument(
         "scanTopic1", default_value="/front/sick_scan/scan", description="Scan topic of the first laserscan"
@@ -152,37 +167,34 @@ def generate_launch_description():
     declare_rangeMax_argument = DeclareLaunchArgument("rangeMax", default_value="100.0", description="rangeMax")
 
     declare_start_mapper_argument = DeclareLaunchArgument(
-        "start_mapper", default_value="false", description='Set this value on "true", to start the mapper node'
+        "start_mapper", default_value="true", description='Set this value on "true", to start the mapper node'
     )
     declare_machine_names_argument = DeclareLaunchArgument(
         "machine_names",
         default_value=[
-            "M-DS",
-            "M-SS",
-            "M-BS",
-            "M-CS1",
-            "M-CS2",
-            "M-RS1",
-            "M-RS2",
-            "C-DS",
-            "C-BS",
-            "C-SS",
-            "C-RS1",
-            "C-RS2",
-            "C-CS1",
-            "C-CS2",
+            TextSubstitution(text="machine_names:="),
+            TextSubstitution(
+                text='["M-DS","M-DS-I","M-DS-O","M-SS","M-BS","M-CS1","M-CS2",'
+                '"M-RS1","M-RS2","C-DS","C-BS","C-SS","C-RS1","C-RS2","C-CS1","C-CS2",'
+                '"M-SS-I","M-BS-I","M-CS1-I","M-CS2-I","M-RS1-I","M-RS2-I",'
+                '"C-DS-I","C-BS-I","C-SS-I","C-RS1-I","C-RS2-I","C-CS1-I","C-CS2-I",'
+                '"M-SS-O","M-BS-O","M-CS1-O","M-CS2-O","M-RS1-O","M-RS2-O",'
+                '"C-DS-O","C-BS-O","C-SS-O","C-RS1-O","C-RS2-O","C-CS1-O","C-CS2-O"]'
+            ),
         ],
         description="List of machine frame IDs used by the mapper node to retrieve their static transforms (TFs).",
     )
     declare_position_tolerance_argument = DeclareLaunchArgument(
         "position_tolerance",
-        default_value="0.3",
-        description="Maximum allowed distance (in meters) between a laser segment and a machine for association.",
+        default_value="1",
+        description="Maximum allowed distance (in meters) between the callculated machine mid point based on the laser segment "
+        " and a the machine frame from the refbox",
     )
     declare_angle_tolerance_argument = DeclareLaunchArgument(
         "angle_tolerance",
-        default_value="0.5",
-        description="Maximum allowed angular deviation (in radians) between a laser segment and a machine orientation.",
+        default_value="3.14",
+        description="Maximum allowed angular deviation (in radians) between the callculated machine mid point based on the laser segment"
+        " and a the machine frame from the refbox",
     )
 
     # Erstellen des LaunchDescription-Objekts und Hinzufügen der Aktionen
