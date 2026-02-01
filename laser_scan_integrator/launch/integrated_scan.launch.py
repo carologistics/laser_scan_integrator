@@ -187,14 +187,14 @@ def generate_launch_description():
     declare_position_tolerance_argument = DeclareLaunchArgument(
         "position_tolerance",
         default_value="1",
-        description="Maximum allowed distance (in meters) between the callculated machine mid point based on the laser segment "
-        " and a the machine frame from the refbox",
+        description="Maximum allowed distance (in meters) between the callculated machine mid point "
+        "based on the laser segment and a the machine frame from the refbox",
     )
     declare_angle_tolerance_argument = DeclareLaunchArgument(
         "angle_tolerance",
         default_value="3.14",
-        description="Maximum allowed angular deviation (in radians) between the callculated machine mid point based on the laser segment"
-        " and a the machine frame from the refbox",
+        description="Maximum allowed angular deviation (in radians) between the callculated machine "
+        "mid point based on the laser segment and a the machine frame from the refbox",
     )
 
     # Erstellen des LaunchDescription-Objekts und Hinzufügen der Aktionen

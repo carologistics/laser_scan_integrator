@@ -269,7 +269,6 @@ private:
       ;
       output.transform = tf2::toMsg(tf_result);
 
-
       tf_broadcaster_->sendTransform(output);
     };
 
@@ -529,7 +528,7 @@ private:
         tf_broadcaster_->sendTransform(corrected_transform_avg);
 
         pub_machine_parts(corrected_transform_avg, machine_frame_id);
-        
+
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map";
         marker.header.stamp = this->now();

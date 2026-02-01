@@ -484,15 +484,14 @@ private:
       const std_msgs::msg::Header &header) {
     for (const auto &line : lines) {
       visualization_msgs::msg::Marker marker;
-      marker.header = header;     
-      marker.ns = "line_markers"; 
-      static int marker_id = 0;  
+      marker.header = header;
+      marker.ns = "line_markers";
+      static int marker_id = 0;
       marker.id = marker_id++;
-      marker.type =
-          visualization_msgs::msg::Marker::LINE_LIST; 
+      marker.type = visualization_msgs::msg::Marker::LINE_LIST;
       marker.action = visualization_msgs::msg::Marker::ADD;
 
-      marker.scale.x = 0.05; 
+      marker.scale.x = 0.05;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
