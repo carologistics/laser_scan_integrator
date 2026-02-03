@@ -1,4 +1,4 @@
-// Copyright (c) 2025 Carologistics
+// Copyright (c) 2025-2026 Carologistics
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,13 +32,8 @@
 #include "laser_scan_integrator_msg/msg/line_segments.hpp"
 #include "laser_scan_integrator_msg/srv/toggle_segmentation.hpp"
 
-// #include <pcl/point_cloud.h>
-// #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
-// #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
-// #include <pcl/filters/extract_indices.h>
-// #include <pcl/search/kdtree.h>
 
 #include <pcl/common/centroid.h>
 #include <pcl/common/distances.h>
@@ -206,19 +201,11 @@ private:
     // Configure SAC segmentation
     pcl::SACSegmentation<pcl::PointXYZ> seg;
     seg.setOptimizeCoefficients(true);
-    // This is commented out because it leads to the following error during
-    // execution: [laser_scan_integrator-10]
-    // [pcl::SampleConsensusModelLine::optimizeModelCoefficients] Not enough
-    // inliers to refine/optimize the model's coefficients (2)! Returning the
-    // same coefficients.
     seg.setModelType(pcl::SACMODEL_LINE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setDistanceThreshold(distance_tolerance);
     seg.setMaxIterations(1000);
-    // pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new
-    // pcl::search::KdTree<pcl::PointXYZ>()); seg.setSamplesMaxDist(0.4, tree);
 
-    // Meomeor leak noch mal drüber schauen liebr einen unique pointer erstellen
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
 
@@ -353,12 +340,6 @@ private:
       seg.setSamplesMaxDist(segm_sample_max_dist, search);
       seg.setInputCloud(in_cloud);
       seg.segment(*inliers, *coeff);
-      RCLCPP_INFO(this->get_logger(),
-                  "Inliers (Anzahl: %zu):", inliers->indices.size());
-      for (std::size_t i = 0; i < inliers->indices.size(); ++i) {
-        RCLCPP_INFO(this->get_logger(), "  inliers->indices[%zu] = %d", i,
-                    inliers->indices[i]);
-      }
       if (inliers->indices.size() == 0) {
         // no line found
         break;
@@ -366,15 +347,8 @@ private:
 
       // check for a minimum number of expected inliers
       if ((double)inliers->indices.size() < segm_min_inliers) {
-        // logger->log_warn(name(), "[L %u] no more lines (%zu inliers, required
-        // %u)", 	       loop_count_, inliers->indices.size(),
-        // segm_min_inliers);
         break;
       }
-
-      // logger->log_info(name(), "[L %u] Found line with %zu inliers",
-      //		     loop_count_, inliers->indices.size());
-
       // Cluster within the line to make sure it is a contiguous line
       // the line search can output a line which combines lines at separate
       // ends of the field of view...
@@ -415,11 +389,7 @@ private:
         pcl::PointIndices::Ptr tmp_index(new pcl::PointIndices());
         segc.segment(*tmp_index, *coeff);
         *line_cluster_index = *tmp_index;
-        RCLCPP_INFO(this->get_logger(),
-                    "tmp_index (Anzahl: %zu):", tmp_index->indices.size());
         for (std::size_t i = 0; i < tmp_index->indices.size(); ++i) {
-          RCLCPP_INFO(this->get_logger(), "  tmp_index->indices[%zu] = %d", i,
-                      tmp_index->indices[i]);
         }
       }
 
@@ -459,9 +429,6 @@ private:
       float max_proj = -std::numeric_limits<float>::infinity();
 
       for (const auto &p : cloud_line->points) {
-        // for (auto idx : inliers->indices) {
-        // const auto &p = in_cloud->points[idx];
-
         Eigen::Vector3f point(p.x, p.y, p.z);
         float projection = direction.dot(point - point_on_line);
 
@@ -487,8 +454,6 @@ private:
 
       line_length = (end_point - start_point).norm();
 
-      // if (line_length == 0 || (min_length >= 0 && line_length < min_length)
-      //                   || (max_length >= 0 && line_length > max_length)) {
       if (line_length == 0 || (line_length < 0.65 || line_length > 0.75)) {
         continue;
       }
@@ -519,29 +484,21 @@ private:
       const std_msgs::msg::Header &header) {
     for (const auto &line : lines) {
       visualization_msgs::msg::Marker marker;
-      marker.header = header;     // Übernahme des Headers
-      marker.ns = "line_markers"; // Namespace für die Linien-Marker
-      static int marker_id = 0;   // Eindeutige ID für jeden Marker
+      marker.header = header;
+      marker.ns = "line_markers";
+      static int marker_id = 0;
       marker.id = marker_id++;
-      marker.type =
-          visualization_msgs::msg::Marker::LINE_LIST; // Verwendung von
-                                                      // LINE_LIST, da je Marker
-                                                      // zwei Punkte definiert
+      marker.type = visualization_msgs::msg::Marker::LINE_LIST;
       marker.action = visualization_msgs::msg::Marker::ADD;
 
-      // Skalierung: Die Breite der Linie
-      marker.scale.x = 0.05; // Passen Sie diesen Wert bei Bedarf an
-
-      // Farbe: Beispielweise ein kräftiges Grün (voll opak)
+      marker.scale.x = 0.05;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
       marker.color.a = 1.0;
 
-      // Unbegrenzte Lebensdauer
-      marker.lifetime = rclcpp::Duration(0, 0);
+      marker.lifetime = rclcpp::Duration(10, 0);
 
-      // Definieren der Endpunkte der Linie
       geometry_msgs::msg::Point p1, p2;
       p1.x = line.end_point1.x;
       p1.y = line.end_point1.y;
@@ -701,10 +658,6 @@ private:
 
       // Convert the integrated laser scan into a point cloud
       auto pointcloud = laser_scan_to_pointcloud(integrated_msg_);
-      // publishPointCloud(integrated_msg_);
-      //  Detect lines in the point cloud with a target length of 70 cm and a
-      //  tolerance of 2 cm
-      // auto lines = detect_lines(pointcloud, 0.7f, 0.02f);
       auto lines = calc_lines(pointcloud);
 
       // Convert the detected lines into a ROS message format
