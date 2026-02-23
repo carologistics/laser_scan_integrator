@@ -47,6 +47,10 @@ def launch_nodes_withconfig(context, *args, **kwargs):
     for argname, argval in context.launch_configurations.items():
         launch_configuration[argname] = argval
 
+    namespace_value = launch_configuration.get("namespace", "").strip("/")
+    tf_topic = "/tf" if namespace_value == "" else f"/{namespace_value}/tf"
+    tf_static_topic = "/tf_static" if namespace_value == "" else f"/{namespace_value}/tf_static"
+
     load_nodes = GroupAction(
         actions=[
             Node(
@@ -78,6 +82,10 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                 output="screen",
                 respawn=True,
                 respawn_delay=2,
+                remappings=[
+                    ("/tf", tf_topic),
+                    ("/tf_static", tf_static_topic),
+                ],
             ),
             Node(
                 package="laser_scan_mapper",
@@ -94,6 +102,10 @@ def launch_nodes_withconfig(context, *args, **kwargs):
                         "angle_tolerance": launch_configuration["angle_tolerance"],
                         "machine_names": launch_configuration["machine_names"],
                     }
+                ],
+                remappings=[
+                    ("/tf", tf_topic),
+                    ("/tf_static", tf_static_topic),
                 ],
             ),
         ]
